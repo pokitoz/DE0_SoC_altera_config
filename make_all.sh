@@ -704,7 +704,9 @@ select opt in $OPTIONS_MENU; do
 	elif [ "$opt" = "Push_to_sd_card" ]; then
 		write_sdcard
 	elif [ "$opt" = "Get_Results" ]; then
+		set +e
 		$sw_folder_a/get_images.sh
+		set -e
 	else
 	 	echowarn "Bad option"
 	fi

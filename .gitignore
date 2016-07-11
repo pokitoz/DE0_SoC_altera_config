@@ -31,3 +31,20 @@
 # Debug files
 *.dSYM/
 *.su
+
+*.mod.c
+*.o.cmd
+.*
+*.symvers
+*.order
+*.mod
+
+# Log Files
+*.log
+*.jou
+*.str
+
+# Dev directory
+sw/*
+!sw/*.sh
+
