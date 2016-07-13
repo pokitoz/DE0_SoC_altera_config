@@ -20,15 +20,21 @@ mkdir -p $result_folder_a
 folder_application_array=($folder_applications)
 echo -e "\n*** Get the images back ***"
 
-for application in "${folder_application_array[@]}"
-do
+#for application in "${folder_application_array[@]}"
+#do
 
-	sshpass -p "$env_sshpassword" scp $sshcommand:"*/*.tiff" "$result_folder_a"
-	sshpass -p "$env_sshpassword" scp $sshcommand:"*/*.ppm" "$result_folder_a"
+
+	echo -e "Copy files to $result_folder_a from $sshcommand with password $env_sshpassword"
+	#sshpass -p "$env_sshpassword" scp $sshcommand:"*/*.tiff" "$result_folder_a"
+	#sshpass -p "$env_sshpassword" scp $sshcommand:"*/*.ppm" "$result_folder_a"
 	sshpass -p "$env_sshpassword" scp $sshcommand:"*/*.bmp" "$result_folder_a"
 
-	sshpass -p "$env_sshpassword" scp $sshcommand:"*.bmp" "$result_folder_a"
-done
+	#sshpass -p "$env_sshpassword" scp $sshcommand:"*.bmp" "$result_folder_a"
+
+#done
+
+
+echo -e "*** Done `basename $0` ***"
 
 
 popd
