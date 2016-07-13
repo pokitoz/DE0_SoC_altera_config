@@ -124,7 +124,9 @@ if [ -z ${setup_env+x} ]; then
 
 
 	indent_c_code(){
-
+	
+		set +e
+	
 		if [ -z "*.c" ]; then
 			echowarn "Formating c files"
 			indent "$indent_command_flags" ./*.c 
@@ -134,6 +136,8 @@ if [ -z ${setup_env+x} ]; then
 			echowarn "Formating h files"
 			indent "$indent_command_flags" ./*.h
 		fi
+
+		set -e
 
 	}
 
