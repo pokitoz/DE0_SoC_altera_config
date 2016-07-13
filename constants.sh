@@ -62,8 +62,6 @@ uboot_make_parameter="socfpga_cyclone5_config"
 sdcard_image_file_abs="${script_dir_abs}/sw/linux/DE0-Nano-SoC_Linux_Console.img"
 
 
-sdcard_fat32_mount_point_abs="/media/sdcard_socfpga_fat32"
-
 # Device Tree
 device_tree_blob_file_name_no_extention="socfpga_project"
 device_tree_blob_file_name="$device_tree_blob_file_name_no_extention.dtb"
