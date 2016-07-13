@@ -32,13 +32,13 @@ trap ctrl_c INT
 
 
 # Functions definitions ########################################################
-print_info(){
+print_useful_info(){
 
     echoinfo "\n*** MAKE SURE MSEL IS 00000 *** "
     echoinfo "*** The zImage is copied *** "
-	echoinfo "*** You can type ssh root@10.42.0.2 (password terasic) Check the static ip in etc_network_interface ***"
+	echoinfo "*** You can type ssh $sshcommand (password terasic) Check the static ip in etc_network_interface ***"
     echoinfo "*** The command \`ifup eth0\` will be executed on the FPGA *** "
-    echoinfo "*** If hps_0.h changed  you need to recompile *** "    
+    echoinfo "*** If hps_0.h changed  you need to recompile all files using it *** "    
     echoinfo "*** Open quartus project to see the details of the block size *** "
 	echoinfo "*** Use minicom or miniterm.py to communicate by USB-UART (baud 115200) *** "
     echoinfo "*** Go to sw/ and launch the script once the board is on or use the menu ***\n"
@@ -46,7 +46,7 @@ print_info(){
 }
 
 ctrl_c() {
-	print_info
+	print_useful_info
   	echogood " \nExited by user with CTRL+C "
 	echogood " *** DONE `basename "$0"` *** "
 	trap : 0
@@ -171,8 +171,12 @@ validate_required_files() {
 		sdcard_fat32_partition_number="p1"
 		sdcard_dev_ext3_id="p2"
 		sdcard_preloader_partition_number="p3"
+	else 
+		echoerr "Error: could not find \"${sdcard_image_file_abs}/\" partitions"
+		exit 1
 	fi
 
+	sdcard_ext3_abs="${sdcard_abs}${sdcard_dev_ext3_id}"
 	sdcard_fat32_abs="${sdcard_abs}${sdcard_fat32_partition_number}"
 	sdcard_preloader_abs="${sdcard_abs}${sdcard_preloader_partition_number}"
 
@@ -438,8 +442,8 @@ write_sdcard() {
     fi
 
     set +e
-    sudo umount ${sdcard_abs}${sdcard_dev_ext3_id}
-    sudo umount ${sdcard_abs}${sdcard_fat32_partition_number}
+    sudo umount ${sdcard_ext3_abs}
+    sudo umount ${sdcard_fat32_abs}
     set -e
     
     echodef "Writing sdcard image [START]"
@@ -450,59 +454,59 @@ write_sdcard() {
     fi
     echodef "Writing sdcard image $done_string"
 
+    sudo mkdir -p "$sdcard_ext3_mount_point_abs"
+    sudo mount -t ext3 "${sdcard_ext3_abs}" "$sdcard_ext3_mount_point_abs"
+
     #Copy interfaces configurations
-    sudo mkdir -p "/media/sdcard_linux"
-    echowarn "Set the ip to static : /etc/network/interfaces"
-    sudo mount -t ext3 "${sdcard_abs}p2" "/media/sdcard_linux"
-    sudo cp "sw/linux/etc_network_interfaces" "/media/sdcard_linux/etc/network/interfaces"
+    echowarn "Set the ip to static : /etc/network/interfaces"    
+	sudo cp "sw/linux/etc_network_interfaces" "$sdcard_ext3_mount_point_abs/etc/network/interfaces"
 
     #Add command ifup eth0 to /etc/profile    
     echowarn "Add command ifup eth0 to /etc/profile"
-    sudo cp "sw/linux/etc_profile" "/media/sdcard_linux/etc/profile"
-
+    sudo cp "sw/linux/etc_profile" "$sdcard_ext3_mount_point_abs/etc/profile"
 
 	if [ -f "rc.local" ]; then
-		sudo cp "sw/linux/rc.local" "/media/sdcard_linux/etc/rc.local"
+		sudo cp "sw/linux/rc.local" "$sdcard_ext3_mount_point_abs/etc/rc.local"
 	fi
-
 
     #Change the date
     echowarn "Changing the date"
-    sudo sh -c 'date +%Y%m%d%H%M > "/media/sdcard_linux/etc/timestamp"'
+	echo "date +%Y%m%d%H%M" > "sw/linux/timestamp"
+    sudo cp "sw/linux/timestamp" "$sdcard_ext3_mount_point_abs/etc/timestamp"
 
-    echowarn "Changing message"
-    sudo sh -c 'echo "Welcome to LinuxSoC!" > "/media/sdcard_linux/etc/issue.net"'
+    echowarn "Changing messages"
+	echo "Welcome to Sensefly SoC!" > "sw/linux/issue.net"
+    sudo cp "sw/linux/issue.net" "$sdcard_ext3_mount_point_abs/etc/issue.net"
+	
+	echo "FPGA SoC Sensefly" > "sw/linux/issue"
+    sudo cp "sw/linux/issue" "$sdcard_ext3_mount_point_abs/etc/issue"
+
 	sudo sync
-
-    sudo umount "${sdcard_abs}$sdcard_dev_ext3_id"
-    sudo rm -rf "/media/sdcard_linux"
+    sudo umount "${sdcard_ext3_mount_point_abs}"
+    sudo rm -rf "$sdcard_ext3_mount_point_abs"
 
     sudo mkdir -p "${sdcard_fat32_mount_point_abs}"
     sudo mount -t vfat "${sdcard_fat32_abs}" "${sdcard_fat32_mount_point_abs}"
 
-    echodef "Writing preloader [START]"
+
     sudo dd if="${preloader_mkimage_bin_file_abs}" of="${sdcard_preloader_abs}" bs="64k" seek=0
     sudo sync
     echodef "Writing preloader $done_string"
 
-    echodef "Writing uboot [START]"
     sudo cp "${uboot_img_file_abs}" "${sdcard_fat32_mount_point_abs}"
     echodef "Writing uboot $done_string"
 
-    echodef "Writing uboot script [START]"
     sudo cp "${uboot_script_file_bin_abs}" "${sdcard_fat32_mount_point_abs}"
     echodef "Writing uboot script $done_string"
 
-    echodef "Writing FPGA raw binary file [START]"
-    sudo rm -rf "${sdcard_fat32_mount_point_abs}/"*".rbf" # remove pre-installed rbf file
+    sudo rm -rf "${sdcard_fat32_mount_point_abs}/"*".rbf" 
+	echodef "Remove pre-installed rbf file"
     sudo cp "${rbf_file_abs}" "${sdcard_fat32_mount_point_abs}"
     echodef "Writing FPGA raw binary file $done_string"
 
-    echodef "Copy zImage [START]"
     sudo cp "sw/linux/zImage" "${sdcard_fat32_mount_point_abs}/zImage"
     echodef "Copy zImage $done_string"
 
-    echodef "Copy Device Tree Binary [START]"
     sudo cp "sw/linux/$device_tree_blob_file_name" "${sdcard_fat32_mount_point_abs}/$device_tree_blob_file_name"
     echodef "Copy Device Tree Binary $done_string"
 
@@ -514,8 +518,8 @@ write_sdcard() {
 
 
     set +e
-    sudo umount "/dev/mmcblk0p2"
-    sudo umount "/dev/mmcblk0p1"
+    sudo umount ${sdcard_fat32_abs}
+    sudo umount ${sdcard_ext3_abs}
     set -e
 
 
@@ -529,7 +533,7 @@ write_sdcard() {
     echowarn "\n *** If one path was ommited, please copy hps0.h to it *** "    
 
 
-	print_info
+	print_useful_info
 }
 
 
@@ -582,7 +586,6 @@ build_linux_kernel(){
 	#socfpga_project
 	device_tree_source_name=$device_tree_blob_file_name_no_extention
 
-	echodef "Get correct kernel version [START]"
 	clone_repo_linux
 	echodef "Get correct kernel version $done_string"
 
@@ -660,7 +663,7 @@ IFS=$old_IFS
 select opt in $OPTIONS_MENU; do
 		
 	if [ "$opt" = "Quit" ]; then
-		print_info
+		print_useful_info
 		echo "Exit menu"
 		break
 	elif [ "$opt" = "Make_all" ]; then
@@ -678,7 +681,8 @@ select opt in $OPTIONS_MENU; do
 		$sw_folder_a/make_applications.sh
 	
 		write_sdcard
-		
+		$sw_folder_a/copy_to_sd.sh $sdcard_ext3_abs $sdcard_fat32_abs
+	
 	elif [ "$opt" = "Clean_build" ]; then
 		echo "Clean"
 	elif [ "$opt" = "Make_Quartus" ]; then
@@ -703,6 +707,8 @@ select opt in $OPTIONS_MENU; do
 		$sw_folder_a/ssh_launch_applications.sh
 	elif [ "$opt" = "Push_to_sd_card" ]; then
 		write_sdcard
+		$sw_folder_a/copy_to_sd.sh $sdcard_ext3_abs $sdcard_fat32_abs
+
 	elif [ "$opt" = "Get_Results" ]; then
 		set +e
 		$sw_folder_a/get_images.sh
