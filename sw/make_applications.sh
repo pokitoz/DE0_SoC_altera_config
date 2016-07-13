@@ -19,8 +19,7 @@ abort()
     echo >&2 '
 *** ABORTED ***
 '
-    echo "An error occurred. Exiting..." >&2
-    echo "Are you using the Embedded System Shell ?..." >&2
+    echo "An error in `basename "$0"` " >&2
     exit 1
 }
 
@@ -39,8 +38,11 @@ do
 
 	echo -e "$c_info \nCompile $driver\n$c_default"
 	pushd $driver_folder_a/$driver/
-	make clean
-	make
+
+		indent_c_code
+		make clean
+		make
+
 	popd
 
 done
@@ -49,7 +51,10 @@ for application in "${folder_application_array[@]}"
 do
 	echo -e "$c_info \nCompile $application\n$c_default"
 	pushd $application_folder_a/$application/
+
+		indent_c_code
 		./compile.sh run_$application
+
 	popd
 
 

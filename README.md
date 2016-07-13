@@ -58,3 +58,9 @@ Remove all the generated files
 Copy all necessary files to the SD card.
 
 Kernel images (pick one, or use the one given in the dropbox link)
+
+
+Packages needed:
+
+sudo apt-get install indent
+sudo apt-get install tree

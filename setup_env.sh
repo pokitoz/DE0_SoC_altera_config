@@ -67,22 +67,31 @@ if [ -z ${setup_env+x} ]; then
 	lib_tiff_source_folder=$sw_folder/libtiff
 	linux_folder=$sw_folder/linux
 	preloader_folder=$sw_folder/preloader
+	scripts_folder=$sw_folder/scripts
+	
+
+
 
 	export sw_folder_a=`readlink -f $sw_folder`
 	export application_folder_a=`readlink -f $application_folder`
+	export scripts_folder_a=`readlink -f $scripts_folder`
 	export driver_folder_a=`readlink -f $driver_folder`
 	export result_folder_a=`readlink -f $result_folder`
 	export lib_tiff_source_folder_a=`readlink -f $lib_tiff_source_folder`
 	export linux_folder_a=`readlink -f $linux_folder`
 	export preloader_folder_a=`readlink -f $preloader_folder`
 
+	export indent_command_flags="-nbad -bap -nbc -bbo -hnl -br -brs -c33 -cd33 -ncdb -ce -ci4 -cli0 -d0 -di1 -nfc1 -i8 -ip0 -l80 -lp -npcs -nprs -npsl -sai -saf -saw -ncs -nsc -sob -nfca -cp33 -ss -ts8 -il1"
 
-	export folder_drivers="convertor_yuv_rgb dummy_driver"
+	export folder_drivers="convertor_yuv_rgb dummy_driver dma_memory_to_memory"
 	#"nav_cam" "quark_interface" "user_input_driver"
 
-	export folder_applications="convertor_yuv_rgb_app"
+	export folder_applications="convertor_yuv_rgb_app dma_memory_to_memory_app"
 	#"nav_cam" "nav_cam_static" "quark_interface" 
 
+
+	export sdcard_fat32_mount_point_abs="/media/sdcard_socfpga_fat32"
+	export sdcard_ext3_mount_point_abs="/media/sdcard_socfpga_ext3"
 
 	echoerr() {
 	    echo -e "$c_error ${@} $c_default"
@@ -106,11 +115,34 @@ if [ -z ${setup_env+x} ]; then
 
 	print_ssh_info(){
 
-		echo -e "\n$c_warning Please make sure the board is on and you have ssh access to it $c_default"
-		echo -e "$c_warning The IP used is $sshaddress $c_default"
-		echo -e "$c_warning The Login and password used are $sshlogin -- $env_sshpassword $c_default"
-		echo -e "$c_warning You should type: ifup eth0 in the UART-USB shell\n$c_default"
+		echowarn "\n Please make sure the board is on and you have ssh access to it "
+		echowarn " The IP used is $sshaddress "
+		echowarn " The Login and password used are $sshlogin -- $env_sshpassword "
+		echowarn " You should type: ifup eth0 in the UART-USB shell \n "
 	
+	}
+
+
+	indent_c_code(){
+
+		if [ -z "*.c" ]; then
+			echowarn "Formating c files"
+			indent "$indent_command_flags" ./*.c 
+		fi
+	
+		if [ -z "*.h" ]; then
+			echowarn "Formating h files"
+			indent "$indent_command_flags" ./*.h
+		fi
+
+	}
+
+	pushd_silent() {
+		command pushd "$@" > /dev/null
+	}
+
+	popd_silent() {
+		command popd "$@" > /dev/null
 	}
 	
 
@@ -120,8 +152,9 @@ if [ -z ${setup_env+x} ]; then
 	export -f echogood
 	export -f echoinfo
 	export -f echodef
-
-
+	export -f pushd_silent
+	export -f popd_silent
+	export -f indent_c_code
 
 fi
 
