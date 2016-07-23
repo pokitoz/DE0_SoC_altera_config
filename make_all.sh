@@ -42,10 +42,16 @@ print_useful_info(){
     echoinfo "*** Open quartus project to see the details of the block size *** "
 	echoinfo "*** Use minicom or miniterm.py to communicate by USB-UART (baud 115200) *** "
     echoinfo "*** Go to sw/ and launch the script once the board is on or use the menu ***\n"
-
+	echoinfo "*** If you get \"fatload - load binary file from a dos filesystem \"***\n"
+	echoinfo "       Stop the execution of uboot by pressing any key\n"
+	echoinfo "       Execute \"env default -a\"\n"
+	echoinfo "       Execute \"saveenv\"\n"
+	echoinfo "       Check the documentation for more details\n"
 }
 
 ctrl_c() {
+
+
 	print_useful_info
   	echogood " \nExited by user with CTRL+C "
 	echogood " *** DONE `basename "$0"` *** "
@@ -95,10 +101,16 @@ asking_to_do() {
 
 abort() {
 
+
+	
     #Reset color to default 
     tput sgr0  
-	echoerr " Error in `basename "$0"`"
-    exit 1
+
+	call_menu_make_all
+#	echoerr "An error occurred in `basename "$0"`. Exiting..."
+	
+
+	#exit 1
 }
 
 trap 'abort' 0
@@ -121,7 +133,25 @@ EOF
 }
 
 
+copy_hps_to_folders(){
+    echoinfo "\n *** Copy the HPS_0.h file where needed *** "
+
+	for folders_hps in $folders_hps_lookup; do
+		for i in $( find "./sw/$folders_hps" -name 'hps_0.h' ); do
+			echoinfo "     Copy hps_0.h to $i   "	
+			cp "./hw/quartus/hps_0.h" "$i"
+		done
+	done
+
+    echowarn "\n *** If one path was ommited, please copy hps0.h to it *** "
+
+}
+
+
 validate_required_files() {
+
+	echoinfo "Validate required files"
+
     # Check if there is a quartus project file
     if [ ! -f "${qpf_file_abs}" ]; then
         echoerr "Error: could not find \"${qpf_file_abs}\"\n"
@@ -179,6 +209,12 @@ validate_required_files() {
 	sdcard_ext3_abs="${sdcard_abs}${sdcard_dev_ext3_id}"
 	sdcard_fat32_abs="${sdcard_abs}${sdcard_fat32_partition_number}"
 	sdcard_preloader_abs="${sdcard_abs}${sdcard_preloader_partition_number}"
+
+
+	echoinfo "Sd card ${sdcard_abs}"
+	echoinfo "  Fat32 ${sdcard_fat32_abs}"
+	echoinfo "  ext3  ${sdcard_ext3_abs}"
+	echoinfo "  Preloader ${sdcard_preloader_abs}"
 
 }
 
@@ -336,9 +372,11 @@ generate_preloader() {
     --settings "${preloader_settings_file_abs}"
 
     pushd "${preloader_target_dir_abs}"
-    make -j2
-    make uboot
+    make -j4
+	rm -rf ./uboot-socfpga
     popd
+
+
 
     echodef "Generating preloader $done_string"
 }
@@ -346,7 +384,11 @@ generate_preloader() {
 
 clone_repo_uboot() {
 
-	checkout_revision_uboot="4ed6ed3c27a069a00c8a557d606a05276cc4653e"
+	echoinfo "Clone Uboot repository"
+
+	checkout_revision_uboot="b104b3dc1dd90cdbf67ccf3c51b06e4f1592fe91"
+	#checkout_revision_uboot="4ed6ed3c27a069a00c8a557d606a05276cc4653e"
+
 
 	git_revision_uboot=""
 
@@ -358,7 +400,7 @@ clone_repo_uboot() {
 
 set +e
 	git_revision_uboot=`git log | grep "commit $checkout_revision_uboot"`
-	echo $git_revision_uboot
+	echoinfo "Uboot GIT revisions:  $git_revision_uboot"
 set -e
 
 	# Need to compile for ARM
@@ -371,8 +413,16 @@ set -e
 		git checkout $checkout_revision_uboot
 		
 	fi
+
+
 	
+	make mrproper
 	make -j4 $uboot_make_parameter
+
+	cp $presets_folder_a/socfpga_cyclone5_socdk.h $uboot_source_dir_abs/include/configs/
+	cp $presets_folder_a/socfpga_de0_nano_soc.h $uboot_source_dir_abs/include/configs/
+	
+	
 	make -j4
 
 	popd
@@ -386,100 +436,133 @@ generate_uboot_script() {
 	clone_repo_uboot
     
 	echodef "Generating uboot script [START]"
+
+
     cat <<EOF > "${uboot_script_file_src_abs}"
+
 # When booting a Linux kernel, U-Boot passes a string command line as kernel parameter
 # U-Boot uses its bootargs environment variable as parameter.
+echo --- Uboot start ---
 
-# Load rbf from FAT partition into memory
-fatload mmc 0:1 \$fpgadata $(basename ${rbf_file_abs});
-
-# Program FPGA
-fpga load 0 \$fpgadata \$filesize;
+echo --- Reseting default commands ---
+env default -a
 
 echo "--- Setting Env variables ---"
-
 # Set the devicetree image to be used
 setenv fdtimage ${device_tree_blob_file_name};
 
-#fatload mmc 0:1 0x815f0000 beagle-xm.dtb
-
 # Set the kernel image to be used
 setenv bootimage zImage;
+
+# address to which the device tree will be loaded
+setenv fdtaddr 0x00000100
+
 #1018M
 setenv mmcboot 'setenv bootargs mem=${linux_kernel_mem_bootarg} console=ttyS0,115200 root=\${mmcroot} rw rootwait;bootz \${loadaddr} - \${fdtaddr}'
 
+# load linux kernel image and device tree to memory
+setenv mmcload 'mmc rescan; \
+fatload mmc 0:1 \${loadaddr} \${bootimage}; \
+fatload mmc 0:1 \${fdtaddr} \${fdtimage}'
+#1 part for fat32
+
+# sdcard ext3 identifier
+setenv mmcroot /dev/mmcblk0${sdcard_dev_ext3_id}
+
+# standard input/output
+setenv stderr serial
+setenv stdin serial
+setenv stdout serial
+
+saveenv
+
+# When booting a Linux kernel, U-Boot passes a string command line as kernel parameter
+# U-Boot uses its bootargs environment variable as parameter.
+# Load rbf from FAT partition into memory
+fatload mmc 0:1 \$fpgadata $(basename ${rbf_file_abs});
+# Program FPGA
+fpga load 0 \$fpgadata \$filesize;
 # enable the FPGA 2 HPS and HPS 2 FPGA bridges
-run bridge_enable_handoff;
-
+#run bridge_enable_handoff; does not exist anymor e:D
+bridge enable;
 echo "--- Booting Linux ---"
-
 # mmcload & mmcboot are scripts included in the default socfpga uboot environment
 # it loads the devicetree image and kernel to memory
 run mmcload;
-
 # mmcboot sets the bootargs and boots the kernel with the dtb specified above
 run mmcboot;
-EOF
 
+
+
+EOF
+	
+	echodef "Make script image [START]"
     mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "${quartus_project_name_no_extension}" -d "${uboot_script_file_src_abs}" "${uboot_script_file_bin_abs}"
+	ls -l ${uboot_script_file_bin_abs}
     echodef "Generating uboot script $done_string"
 }
 
 
+generate_sd_card_partitions(){
 
-write_sdcard() {
+	echoinfo "Partition the SD cards"
 
-    if [ ! -b "${sdcard_abs}" ]; then
-        
-        while [ ! -b "${sdcard_abs}" ]; do
 
-            echo "Error: could not find \"${sdcard_abs}\""
-            echo "You can plug the SD card or quit the script with CTRL + C"
-            
-            read -p "Press [Enter] key to restart..."
+	check_sd_card_plug "${sdcard_abs}"
 
-        done
-    fi
 
     set +e
     sudo umount ${sdcard_ext3_abs}
     sudo umount ${sdcard_fat32_abs}
     set -e
     
-    echodef "Writing sdcard image [START]"
-    if [ -n "$upload_linux_image" ]; then
-		echo "upload_linux_image is not empty."
-    	sudo dd if="${sdcard_image_file_abs}" of="${sdcard_abs}" bs="1M"
-    	sudo sync
-    fi
-    echodef "Writing sdcard image $done_string"
+    echoinfo "Writing sdcard image [START]"
+	number_of_byte=`du -k "${sdcard_image_file_abs}" | cut -f1`
+	echoinfo "Trying to transfer $number_of_byte bytes"	
+	sudo dd if="${sdcard_image_file_abs}" of="${sdcard_abs}" bs="1M"&
+    sudo sh -c "while pkill -10 ^dd$; do sleep 10; done"
+	
+	sudo sync
+    echoinfo "Writing sdcard image $done_string"
 
+
+}
+
+write_config_to_sd() {
+
+	echoinfo "Write configurations files to SD card"
+
+    check_sd_card_plug "${sdcard_abs}"
+
+
+
+    set +e
+    sudo umount ${sdcard_ext3_abs}
+    sudo umount ${sdcard_fat32_abs}
+    set -e
+    
     sudo mkdir -p "$sdcard_ext3_mount_point_abs"
     sudo mount -t ext3 "${sdcard_ext3_abs}" "$sdcard_ext3_mount_point_abs"
 
     #Copy interfaces configurations
     echowarn "Set the ip to static : /etc/network/interfaces"    
-	sudo cp "sw/linux/etc_network_interfaces" "$sdcard_ext3_mount_point_abs/etc/network/interfaces"
+	sudo cp "$configs_folder_a/etc_network_interfaces" "$sdcard_ext3_mount_point_abs/etc/network/interfaces"
 
     #Add command ifup eth0 to /etc/profile    
     echowarn "Add command ifup eth0 to /etc/profile"
-    sudo cp "sw/linux/etc_profile" "$sdcard_ext3_mount_point_abs/etc/profile"
+    sudo cp "$configs_folder_a/etc_profile" "$sdcard_ext3_mount_point_abs/etc/profile"
 
 	if [ -f "rc.local" ]; then
-		sudo cp "sw/linux/rc.local" "$sdcard_ext3_mount_point_abs/etc/rc.local"
+		sudo cp "$configs_folder_a/rc.local" "$sdcard_ext3_mount_point_abs/etc/rc.local"
 	fi
 
     #Change the date
     echowarn "Changing the date"
-	echo "date +%Y%m%d%H%M" > "sw/linux/timestamp"
-    sudo cp "sw/linux/timestamp" "$sdcard_ext3_mount_point_abs/etc/timestamp"
+    sudo cp "$configs_folder_a/timestamp" "$sdcard_ext3_mount_point_abs/etc/timestamp"
 
     echowarn "Changing messages"
-	echo "Welcome to Sensefly SoC!" > "sw/linux/issue.net"
-    sudo cp "sw/linux/issue.net" "$sdcard_ext3_mount_point_abs/etc/issue.net"
-	
-	echo "FPGA SoC Sensefly" > "sw/linux/issue"
-    sudo cp "sw/linux/issue" "$sdcard_ext3_mount_point_abs/etc/issue"
+    sudo cp "$configs_folder_a/issue.net" "$sdcard_ext3_mount_point_abs/etc/issue.net"
+    sudo cp "$configs_folder_a/issue" "$sdcard_ext3_mount_point_abs/etc/issue"
 
 	sudo sync
     sudo umount "${sdcard_ext3_mount_point_abs}"
@@ -489,9 +572,13 @@ write_sdcard() {
     sudo mount -t vfat "${sdcard_fat32_abs}" "${sdcard_fat32_mount_point_abs}"
 
 
-    sudo dd if="${preloader_mkimage_bin_file_abs}" of="${sdcard_preloader_abs}" bs="64k" seek=0
+    sudo dd if="${preloader_mkimage_bin_file_abs}" of="${sdcard_preloader_abs}"
+# bs="64k" seek=0
     sudo sync
     echodef "Writing preloader $done_string"
+
+
+	sudo rm -f ${sdcard_fat32_mount_point_abs}/*
 
     sudo cp "${uboot_img_file_abs}" "${sdcard_fat32_mount_point_abs}"
     echodef "Writing uboot $done_string"
@@ -504,12 +591,16 @@ write_sdcard() {
     sudo cp "${rbf_file_abs}" "${sdcard_fat32_mount_point_abs}"
     echodef "Writing FPGA raw binary file $done_string"
 
-    sudo cp "sw/linux/zImage" "${sdcard_fat32_mount_point_abs}/zImage"
+    sudo cp "$linux_folder_a/zImage" "${sdcard_fat32_mount_point_abs}/zImage"
     echodef "Copy zImage $done_string"
 
-    sudo cp "sw/linux/$device_tree_blob_file_name" "${sdcard_fat32_mount_point_abs}/$device_tree_blob_file_name"
+    sudo cp "$linux_folder_a/$device_tree_blob_file_name" "${sdcard_fat32_mount_point_abs}/$device_tree_blob_file_name"
     echodef "Copy Device Tree Binary $done_string"
 
+	dtc -I dtb -O dts -o "$linux_folder_a/$device_tree_output_source_file_name" "$linux_folder_a/$device_tree_blob_file_name"
+    echodef "Copy DTS generated from DTB $done_string"
+
+	ls -l ${sdcard_fat32_mount_point_abs}
 
     sudo sync
 
@@ -523,22 +614,14 @@ write_sdcard() {
     set -e
 
 
-    echoinfo "\n *** Copy the HPS_0.h file where needed *** "
-
-	for i in $( find ./sw -name 'hps_0.h' ); do
-		echoinfo "     Copy hps_0.h to $i   "	
-		cp "./hw/quartus/hps_0.h" "$i"
-	done
-
-    echowarn "\n *** If one path was ommited, please copy hps0.h to it *** "    
-
-
 	print_useful_info
 }
 
 
+
 clone_repo_linux() {
 
+	echoinfo "Clone Linux Repository"
 	git_revision_linux=""
 
 	if [ ! -d "$linux_src_dir" ]; then
@@ -551,31 +634,31 @@ clone_repo_linux() {
 	echodef "Jump into linux source: "
 	echodef "    $linux_src_dir"
 
-	pushd $linux_src_dir
-
-set +e
-	echodef "Print current version of kernel"
-	git_revision_linux=`git log | grep "commit" -m 1`
-	linux_version=`git log | grep "Linux" -m 1`
-	echodef$git_revision_linux
-	echodef$linux_version
-set -e
-
 	# Need to compile for ARM
 	export ARCH=$cross_compile_arch
 	export CROSS_COMPILE=$cross_compile_linux
 
-	#If you need a specific kernel version, change the commit
-	if [ "$linux_checkout_revision_linux" != "null" ]; then
-		echodef "Get commit $git_revision_linux"
-		if [ "$linux_checkout_revision_linux" == "master" ]; then
-			make distclean
-			git checkout master
-		elif [ "$git_revision_linux" != "commit $linux_checkout_revision_linux" ]; then
-			make distclean
-			git checkout $linux_checkout_revision_linux
-		fi
-	fi
+	pushd $linux_src_dir
+
+#set +e
+#	echodef "Print current version of kernel"
+#	git_revision_linux=`git log | grep "commit" -m 1`
+#	linux_version=`git log | grep "Linux" -m 1`
+#	echodef $git_revision_linux
+#	echodef $linux_version
+#set -e
+
+#	#If you need a specific kernel version, change the commit
+#	if [ "$linux_checkout_revision_linux" != "null" ]; then
+#		echodef "Get commit $git_revision_linux"
+#		if [ "$linux_checkout_revision_linux" == "master" ]; then
+#			make distclean
+#			git checkout master
+#		elif [ "$git_revision_linux" != "commit $linux_checkout_revision_linux" ]; then
+#			make distclean
+#			git checkout $linux_checkout_revision_linux
+#		fi
+#	fi
 
 	popd
 
@@ -583,8 +666,8 @@ set -e
 
 build_linux_kernel(){
 
-	#socfpga_project
-	device_tree_source_name=$device_tree_blob_file_name_no_extention
+
+	echoinfo "Build linux kernel"
 
 	clone_repo_linux
 	echodef "Get correct kernel version $done_string"
@@ -601,7 +684,8 @@ build_linux_kernel(){
 	fi	
 
 	echowarn "\nBuild the kernel \n "
-	cp ../$device_tree_source_name.dts $linux_dts_file
+	echowarn "Copy $custom_device_tree_source_abs to $linux_dts_file"
+	cp $custom_device_tree_source_abs $linux_dts_file
 	make socfpga_defconfig
 
 	echowarn "\nBuild zImage\n"
@@ -610,23 +694,146 @@ build_linux_kernel(){
 	echo ""
 
 	echowarn "\nBuild the device tree\n "
-	make -j4 $device_tree_source_name.dtb
+	make -j4 $device_tree_blob_file_name
 	ls -l $linux_dtb_file
 	echo ""
 
 
 	#Both should be copied into the SD card
-	echowarn "Copy zImage and $device_tree_source_name.dtb to sw/linux"
-	cp $linux_zImage_file ../
-	cp $linux_dtb_file ../
+	echowarn "Copy zImage and $device_tree_blob_file_name to $linux_folder_a"
+	cp $linux_zImage_file $linux_folder_a/
+	cp $linux_dtb_file $linux_folder_a/
 
 	popd
 
 }
 
+
+generate_dtb(){
+
+	echoinfo "Generate Device tree Binary"
+	sopc2dts_github="https://github.com/altera-opensource/sopc2dts.git"
+	dtb_folder_a=`readlink -f ./sw/linux/dtb`
+
+	presets_folder_a=`readlink -f ./sw/presets`
+	sopc2dts_folder_a=`readlink -f ./sw/linux/dtb/sopc2dts`
+	quartus_folder_a=`readlink -f ./hw/quartus`
+
+	pushd $dtb_folder_a
+
+		if [ ! -d ./sopc2dts ]; then
+			git clone $sopc2dts_github
+			make
+		fi
+
+		cp $presets_folder_a/*.xml $sopc2dts_folder_a/
+		cp $quartus_folder_a/soc_system.sopcinfo $sopc2dts_folder_a/soc_system.sopcinfo
+		
+		$sopc2dts_folder_a/make_dtb.sh $device_tree_source_name
+		
+		cp $sopc2dts_folder_a/$device_tree_source_name.dtb $linux_folder_a/
+
+	popd
+
+}
+
+
+call_menu_make_all(){
+
+	old_IFS=$IFS
+	echodef ""
+	hcenter " --------------------- "
+	hcenter " Menu_MakeAll"
+	hcenter " --------------------- "
+	echodef ""
+	echodef ""
+
+
+	PS3="Menu #?> "
+	IFS=$old_IFS
+
+
+	select opt in $OPTIONS_MENU; do
+
+		echoinfo "\n $opt\n"
+		
+		if [ "$opt" = "Quit" ]; then
+			print_useful_info
+			break
+		elif [ "$opt" = "Make_all" ]; then
+
+
+			#generate_qsys_system
+			#compile_quartus_project
+
+			convert_sof_to_rbf
+			generate_hps_qsys_header
+			
+			generate_preloader
+
+			##Generate the device tree source: $1 in arch/arm/boot/dts/
+			##Generate the kernel: zImage in arch/arm/boot/generate_preloader
+			generate_uboot_script
+
+			build_linux_kernel
+			copy_hps_to_folders
+
+			#generate_dtb $device_tree_source_name
+			$sw_folder_a/make_applications.sh
+	
+			if [ -n "$upload_linux_image" ]; then
+				generate_sd_card_partitions
+			fi
+			write_config_to_sd
+			$sw_folder_a/copy_to_sd.sh $sdcard_abs $sdcard_ext3_abs $sdcard_fat32_abs
+	
+		elif [ "$opt" = "Clean_build" ]; then
+			echo "Clean"
+		elif [ "$opt" = "Make_Quartus" ]; then
+			compile_quartus_project
+		elif [ "$opt" = "Make_Qsys" ]; then
+			generate_qsys_system
+		elif [ "$opt" = "Make_uboot" ]; then
+			generate_uboot_script
+		elif [ "$opt" = "Make_linux_kernel" ]; then
+			build_linux_kernel
+		elif [ "$opt" = "Generate_dtb" ]; then
+			generate_dtb $device_tree_source_name
+		elif [ "$opt" = "Make_Send_Exec_Get_SSH" ]; then
+			$sw_folder_a/make_applications.sh
+			$sw_folder_a/ssh_send_folders.sh
+			$sw_folder_a/ssh_launch_applications.sh
+			$sw_folder_a/get_images.sh
+		elif [ "$opt" = "Make_applications" ]; then
+			$sw_folder_a/make_applications.sh
+		elif [ "$opt" = "Send_applications" ]; then
+			$sw_folder_a/ssh_send_folders.sh
+		elif [ "$opt" = "Exec_applications" ]; then
+			$sw_folder_a/ssh_launch_applications.sh
+		elif [ "$opt" = "Push_to_sd_card" ]; then
+			write_config_to_sd
+			$sw_folder_a/copy_to_sd.sh $sdcard_abs $sdcard_ext3_abs $sdcard_fat32_abs
+
+		elif [ "$opt" = "Get_Results" ]; then
+			set +e
+			$sw_folder_a/get_images.sh
+			set -e
+
+		elif [ "$opt" = "Generate_sd_partitions" ]; then
+
+			generate_sd_card_partitions
+		else
+		 	echowarn "Bad option"
+		fi
+
+		echodef ""
+	done
+
+
+}
+
 generate_presets(){
-	pushd $linux_src_dir
-		cd ..
+	pushd $presets_folder_a
 		./make_preset.sh
 	popd
 }
@@ -647,78 +854,7 @@ validate_required_files
 generate_presets
 
 
-old_IFS=$IFS
-echodef ""
-hcenter " --------------------- "
-hcenter " Menu_MakeAll"
-hcenter " --------------------- "
-echodef ""
-echodef ""
-
-
-PS3="Menu #?> "
-IFS=$old_IFS
-
-
-select opt in $OPTIONS_MENU; do
-		
-	if [ "$opt" = "Quit" ]; then
-		print_useful_info
-		echo "Exit menu"
-		break
-	elif [ "$opt" = "Make_all" ]; then
-
-		#generate_qsys_system
-		#compile_quartus_project
-
-		convert_sof_to_rbf
-		generate_hps_qsys_header
-		##Generate the device tree source: $1 in arch/arm/boot/dts/
-		##Generate the kernel: zImage in arch/arm/boot/generate_preloader
-		generate_uboot_script
-
-		build_linux_kernel
-		$sw_folder_a/make_applications.sh
-	
-		write_sdcard
-		$sw_folder_a/copy_to_sd.sh $sdcard_ext3_abs $sdcard_fat32_abs
-	
-	elif [ "$opt" = "Clean_build" ]; then
-		echo "Clean"
-	elif [ "$opt" = "Make_Quartus" ]; then
-		compile_quartus_project
-	elif [ "$opt" = "Make_Qsys" ]; then
-		generate_qsys_system
-	elif [ "$opt" = "Make_uboot" ]; then
-		generate_uboot_script
-	elif [ "$opt" = "Make_linux_kernel" ]; then
-		build_linux_kernel
-
-	elif [ "$opt" = "Make_Send_Exec_Get_SSH" ]; then
-		$sw_folder_a/make_applications.sh
-		$sw_folder_a/ssh_send_folders.sh
-		$sw_folder_a/ssh_launch_applications.sh
-		$sw_folder_a/get_images.sh
-	elif [ "$opt" = "Make_applications" ]; then
-		$sw_folder_a/make_applications.sh
-	elif [ "$opt" = "Send_applications" ]; then
-		$sw_folder_a/ssh_send_folders.sh
-	elif [ "$opt" = "Exec_applications" ]; then
-		$sw_folder_a/ssh_launch_applications.sh
-	elif [ "$opt" = "Push_to_sd_card" ]; then
-		write_sdcard
-		$sw_folder_a/copy_to_sd.sh $sdcard_ext3_abs $sdcard_fat32_abs
-
-	elif [ "$opt" = "Get_Results" ]; then
-		set +e
-		$sw_folder_a/get_images.sh
-		set -e
-	else
-	 	echowarn "Bad option"
-	fi
-
-	echodef ""
-done
+call_menu_make_all
 
 
 
