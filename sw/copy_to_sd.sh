@@ -7,27 +7,36 @@ set -e
 
 abort()
 {
-	echo "An error occurred in `basename "$0"`. Exiting..." >&2
+	echoerr "An error occurred in `basename "$0"`. Exiting..."
 	exit 1
 }
 
 trap 'abort' 0
 
+echo -e "$c_good *** Start `basename "$0"` *** $c_default"
 
 # make sure to be in the same directory as this script #########################
 current_script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 
 
-if [ "$#" -ne 2 ]; then
+if [ "$#" -ne 3 ]; then
     echoerr "Illegal number of parameters"
+	echoerr "Need sdcard path, ext3 partition, fat32 partition"
 	exit 1
 fi
 
 cd "${current_script_dir}"
 source "../setup_env.sh"
 
-sdcard_ext3_abs="$1"
-sdcard_fat32_abs="$2"
+
+
+sdcard_abs="$1"
+
+check_sd_card_plug "${sdcard_abs}"
+
+
+sdcard_ext3_abs="$2"
+sdcard_fat32_abs="$3"
 
 #Need to open the sd card
 set +e
@@ -50,7 +59,7 @@ pushd "${current_script_dir}"
 	for driver in "${folder_drivers_array[@]}"
 	do
 		echowarn "Copy $driver_folder_a/$driver to $sdcard_ext3_mount_point_abs/home/root/"
-		mkdir -p "$sdcard_ext3_mount_point_abs/home/root/$driver"
+		sudo mkdir -p "$sdcard_ext3_mount_point_abs/home/root/$driver"
 
 		pushd_silent $driver_folder_a/$driver/
 		    sudo cp ./*.ko "$sdcard_ext3_mount_point_abs/home/root/$driver"
@@ -61,12 +70,19 @@ pushd "${current_script_dir}"
 	for application in "${folder_application_array[@]}"
 	do
 		echowarn "Copy $application_folder_a/$application to $sdcard_ext3_mount_point_abs/home/root/ "
-		mkdir -p "$sdcard_ext3_mount_point_abs/home/root/$application"
+		sudo mkdir -p "$sdcard_ext3_mount_point_abs/home/root/$application"
 
 		pushd_silent $application_folder_a/$application/
-			sudo cp ./*_app ./run_*.sh "$sdcard_ext3_mount_point_abs/home/root/$application"
-		popd_silent
+			sudo cp ./*_app "$sdcard_ext3_mount_point_abs/home/root/$application"
 
+			if [ -f *.y ]; then
+				sudo cp ./*.y "$sdcard_ext3_mount_point_abs/home/root/$application"
+			fi
+
+			if [ -f run_*.sh ]; then
+				sudo cp ./run_*.sh "$sdcard_ext3_mount_point_abs/home/root/$application"
+			fi
+		popd_silent
 	done
 
 	pushd_silent ${scripts_folder_a}
@@ -76,12 +92,12 @@ pushd "${current_script_dir}"
 
 popd
 
-
+echowarn "\n Synchronise the SD card"
 sudo sync
+
 sudo umount "${sdcard_ext3_abs}"
 sudo rm -rf "$sdcard_ext3_mount_point_abs"
 
 # If an error occurs abort is called
-
 trap : 0
 echo -e "$c_good *** DONE `basename "$0"` *** $c_default"
