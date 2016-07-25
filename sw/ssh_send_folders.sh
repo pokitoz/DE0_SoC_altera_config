@@ -14,15 +14,13 @@ current_script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
 cd "${current_script_dir}"
 source "../setup_env.sh"
 
-pushd "${current_script_dir}"
+
 
 
 abort()
 {
-
 	print_ssh_info
-    echo "An error occurred. Exiting..." >&2
-    echo "Are you using the Embedded System Shell ?..." >&2
+    echoerr "An error occurred in `basename "$0"`. Exiting..."
     exit 1
 }
 
@@ -31,50 +29,59 @@ trap 'abort' 0
 
 
 
+pushd "${current_script_dir}"
 
-#Check if libtiff is present
-set +e
-isLibtiff=`sshpass -p "$env_sshpassword" ssh $sshcommand ls | grep libtiff`
-set -e
+	#Check if libtiff is present
+	set +e
+	isLibtiff=`sshpass -p "$env_sshpassword" ssh $sshcommand ls | grep libtiff`
+	set -e
 
-if [ -z $isLibtiff  ]; then
-	echo -e "\n*** Sending libtiff ***"
-	sshpass -p "$env_sshpassword" scp -r ./libtiff $sshcommand:
-else
-	echo -e "\n*** LibTiff exists ***"
-fi
+	if [ -z $isLibtiff  ]; then
+		echowarn "\nSending libtiff"
+		sshpass -p "$env_sshpassword" scp -r ./libtiff $sshcommand:
+	else
+		echowarn "\nLibTiff exists"
+	fi
 
-folder_drivers_array=($folder_drivers)
-folder_application_array=($folder_applications)
+	folder_drivers_array=($folder_drivers)
+	folder_application_array=($folder_applications)
 
-for driver in "${folder_drivers_array[@]}"
-do
-	echo -e "*** Creating driver folder: $driver***"
-	sshpass -p "$env_sshpassword" ssh $sshcommand mkdir -p "$driver"
+	for driver in "${folder_drivers_array[@]}"
+	do
+		echowarn "\nCreating driver folder: $driver"
+		sshpass -p "$env_sshpassword" ssh $sshcommand mkdir -p "$driver"
 
-	pushd $driver_folder_a/$driver/
-	echo -e "*** Sending files from $drivers_location/$driver/"
-	sshpass -p "$env_sshpassword" scp *.ko $sshcommand:"$driver"
-	popd
+		pushd_silent $driver_folder_a/$driver/
+			echowarn "Sending files from $drivers_location/$driver/"
+			sshpass -p "$env_sshpassword" scp *.ko $sshcommand:"$driver"
+		popd_silent
 
-done
+	done
 
-for application in "${folder_application_array[@]}"
-do
-	echo -e "*** Creating application folder: $application***"
-	sshpass -p "$env_sshpassword" ssh $sshcommand mkdir -p "$application"
+	echo -e ""
 
-	pushd $application_folder_a/$application/
-	echo -e "\n*** Sending $application***"
-	sshpass -p "$env_sshpassword" scp *_app run_*.sh $sshcommand:"$application"
-	popd
+	for application in "${folder_application_array[@]}"
+	do
+		echowarn "\nCreating application folder: $application"
+		sshpass -p "$env_sshpassword" ssh $sshcommand mkdir -p "$application"
 
-done
+		pushd_silent $application_folder_a/$application/
+			echowarn "Sending $application"
+			
+			sshpass -p "$env_sshpassword" scp *_app  $sshcommand:"$application"
 
-pushd $sw_folder_a/scripts/
-	echo -e "\n*** Sending $scripts folder***"
-	sshpass -p "$env_sshpassword" scp *.sh $sshcommand:
-popd
+			if [ -f run_*.sh ]; then
+				sshpass -p "$env_sshpassword" scp run_*.sh $sshcommand:"$application"
+			fi
+
+		popd_silent
+
+	done
+
+	pushd_silent ${scripts_folder_a}
+		echowarn "\nSending scripts folder"
+		sshpass -p "$env_sshpassword" scp *.sh $sshcommand:
+	popd_silent
 
 
 popd
@@ -83,4 +90,4 @@ popd
 # If an error occurs abort is called
 
 trap : 0
-echo -e "$c_good *** DONE `basename "$0"` *** $c_default"
+echo -e "$c_good  DONE `basename "$0"`  $c_default"
