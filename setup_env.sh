@@ -2,8 +2,9 @@
 
 set -e
 
-abort() {
-	echo -e "\e[91m Error in `basename "$0"`\e[39m"
+abort()
+{
+	echoerr "An error occurred in `basename "$0"`. Exiting..."
 	exit 1
 }
 
@@ -32,30 +33,17 @@ if [ -z ${setup_env+x} ]; then
 	export PATH_TO_ALTERA_EMBEDDED="/home/fdepraz/altera/15.1/embedded"
 	echo -e "\e[34m Sourcing $PATH_TO_ALTERA_EMBEDDED/env.sh.. \e[39m"
 	source $PATH_TO_ALTERA_EMBEDDED/env.sh
-	export OPTIONS_MENU="Make_all Clean_build Make_Quartus Make_Qsys Make_uboot Make_linux_kernel Make_applications Send_applications Make_Send_Exec_Get_SSH Push_to_sd_card Exec_applications Get_Results Quit"
+	export OPTIONS_MENU="Make_all Clean_build Make_Quartus Make_Qsys Make_uboot Make_linux_kernel Generate_dtb Make_applications Send_applications Make_Send_Exec_Get_SSH Push_to_sd_card Exec_applications Get_Results Generate_sd_partitions Quit"
 
 
-	relative_kernel_dir="./sw/linux/linux-source/"
+	# Preloader
+	export preloader_target_dir_abs="${script_dir_abs}/sw/preloader"
+	export preloader_settings_file_abs="${preloader_target_dir_abs}/settings.bsp"
+	export preloader_mkimage_bin_file_abs="${preloader_target_dir_abs}/preloader-mkpimage.bin"
 
-	export setup_env="1"
+	
 
-	# C compiler
-	export cross_compile_linux="arm-linux-gnueabihf-"
-	export cross_compile_preloader="arm-altera-eabi-"
-	export cross_compile_arch="arm"
 
-	export ARCH=arm
-	echo -e "\e[34m Set ARCH=$ARCH\e[39m"
-	export CROSS_COMPILE=$cross_compile_linux
-	echo -e "\e[34m Set CROSS_COMPILE=$CROSS_COMPILE\e[39m"
-	export KDIR=`readlink -f $relative_kernel_dir`
-	echo -e "\e[34m Set KDIR=$KDIR\e[39m"
-
-	#SSH
-	export env_sshpassword="terasic"
-	export sshaddress="10.42.0.3"
-	export sshlogin="root"
-	export sshcommand="$sshlogin@$sshaddress"
 
 
 	hw_folder="hw"
@@ -68,8 +56,8 @@ if [ -z ${setup_env+x} ]; then
 	linux_folder=$sw_folder/linux
 	preloader_folder=$sw_folder/preloader
 	scripts_folder=$sw_folder/scripts
-	
-
+	presets_folder=$sw_folder/presets
+	configs_folder=$presets_folder/configs
 
 
 	export sw_folder_a=`readlink -f $sw_folder`
@@ -80,14 +68,99 @@ if [ -z ${setup_env+x} ]; then
 	export lib_tiff_source_folder_a=`readlink -f $lib_tiff_source_folder`
 	export linux_folder_a=`readlink -f $linux_folder`
 	export preloader_folder_a=`readlink -f $preloader_folder`
+	export presets_folder_a=`readlink -f $presets_folder`
+	export configs_folder_a=`readlink -f $configs_folder`
 
-	export indent_command_flags="-nbad -bap -nbc -bbo -hnl -br -brs -c33 -cd33 -ncdb -ce -ci4 -cli0 -d0 -di1 -nfc1 -i8 -ip0 -l80 -lp -npcs -nprs -npsl -sai -saf -saw -ncs -nsc -sob -nfca -cp33 -ss -ts8 -il1"
 
-	export folder_drivers="convertor_yuv_rgb dummy_driver dma_memory_to_memory"
-	#"nav_cam" "quark_interface" "user_input_driver"
+	# Linux
+	export linux_src_dir="${linux_folder_a}/linux-source"
+	#linux_src_dir="${linux_folder_a}/linux-socfpga"
 
-	export folder_applications="convertor_yuv_rgb_app dma_memory_to_memory_app"
-	#"nav_cam" "nav_cam_static" "quark_interface" 
+
+	# uboot
+	export uboot_source_dir_abs="${linux_folder_a}/uboot-socfpga-git"
+	export uboot_img_file_abs="${uboot_source_dir_abs}/u-boot.img"
+	export uboot_script_file_src_abs="${uboot_source_dir_abs}/boot.script"
+	export uboot_script_file_bin_abs="${uboot_source_dir_abs}/u-boot.scr"
+	export uboot_git_repo="git://git.denx.de/u-boot.git"
+
+	export uboot_make_parameter="socfpga_de0_nano_soc_defconfig"
+
+
+	export linux_zImage_file="$(readlink -m "${linux_src_dir}/arch/arm/boot/zImage")"
+
+	# Device Tree	
+	export device_tree_source_name="socfpga_project"
+	export device_tree_blob_file_name="$device_tree_source_name.dtb"
+
+
+	export custom_device_tree_source_abs="$presets_folder_a/$device_tree_source_name.dts";
+	
+	export linux_dts_file="${linux_src_dir}/arch/arm/boot/dts/$device_tree_source_name.dts"
+	export linux_dtb_file="${linux_src_dir}/arch/arm/boot/dts/$device_tree_blob_file_name"
+	export device_tree_output_source_file_name="output_$device_tree_source_name.dts"
+
+
+	#mem=nn[KMG]	[KNL,BOOT] Force usage of a specific amount of memory
+	#		Amount of memory to be used when the kernel is not able
+	#		to see the whole system memory or for test.
+	export linux_kernel_mem_bootarg='1018M'
+
+	#linux_checkout_revision_linux="9735a22799b9214d17d3c231fe377fc852f042e9"
+	export linux_checkout_revision_linux="null"
+
+	export linux_src_git_repo="https://github.com/torvalds/linux.git"
+	#linux_src_git_repo="https://github.com/altera-opensource/linux-socfpga.git"
+	export linux_menuconfig="0"
+
+	export sdcard_image_file_abs="$linux_folder/DE0-Nano-SoC_Linux_Console.img"
+
+
+	export setup_env="1"
+
+	# C compiler
+	export cross_compile_linux="arm-linux-gnueabihf-"
+	export cross_compile_preloader="arm-altera-eabi-"
+	export cross_compile_arch="arm"
+
+	export ARCH=arm
+	echo -e "\e[34m Set ARCH=$ARCH\e[39m"
+	export CROSS_COMPILE=$cross_compile_linux
+	echo -e "\e[34m Set CROSS_COMPILE=$CROSS_COMPILE\e[39m"
+	export KDIR=$linux_src_dir
+	echo -e "\e[34m Set KDIR=$KDIR\e[39m"
+
+	#SSH
+	export env_sshpassword="terasic"
+	export sshaddress="10.42.0.3"
+	export sshlogin="root"
+	export sshcommand="$sshlogin@$sshaddress"
+
+
+
+
+
+
+	#Force blank lines after declarations.
+	#Forces a blank line after every procedure body.
+	#Do not force newline after the comma separating the arguments of a function declaration
+	#No newline after each comma in a declaration
+	#Put braces on line with if, etc.
+	#Put braces on struct declaration line.
+	#Put comments to the right of code in column 33
+	#Put comments to the right of the declarations in column 33
+	#else in an if-then-else construct to cuddle up to the immediately preceding `}'
+	
+	export indent_command_flags=" -bad -br -ce -l200"
+
+ 	#-bbo -hnl -br -brs -c33 -cd33 -ncdb -ce -ci4 -cli0 -d0 -di1 -nfc1 -i8 -ip0 -lp -npcs -nprs -npsl -sai -saf -saw -ncs -nsc -sob -nfca -cp33 -ss -ts8 -il1"
+
+	export folders_hps_lookup="driver application"
+	export folder_drivers="dma_memory_to_memory user_input_driver"
+	#"nav_cam" "quark_interface" "user_input_driver convertor_yuv_rgb dummy_driver"
+
+	export folder_applications="dma_memory_to_memory_app gsensor_hps_app"
+	#"nav_cam" "nav_cam_static" "quark_interface convertor_yuv_rgb_app " 
 
 
 	export sdcard_fat32_mount_point_abs="/media/sdcard_socfpga_fat32"
@@ -127,15 +200,15 @@ if [ -z ${setup_env+x} ]; then
 	
 		set +e
 	
-		if [ -z "*.c" ]; then
-			echowarn "Formating c files"
-			indent "$indent_command_flags" ./*.c 
-		fi
+		for source_c_name in *.c; do
+			echowarn "Formating c file $source_c_name"
+			#indent "$indent_command_flags" ./$source_c_name
+		done
 	
-		if [ -z "*.h" ]; then
-			echowarn "Formating h files"
-			indent "$indent_command_flags" ./*.h
-		fi
+		for header_c_name in *.h; do
+			echowarn "Formating h file $header_c_name"
+			#indent "$indent_command_flags" ./$header_c_name
+		done
 
 		set -e
 
@@ -148,6 +221,25 @@ if [ -z ${setup_env+x} ]; then
 	popd_silent() {
 		command popd "$@" > /dev/null
 	}
+
+
+
+	check_sd_card_plug(){
+
+		if [ ! -b "$1" ]; then
+		    
+		    while [ ! -b "$1" ]; do
+
+		        echoerr "Error: could not find \"$1\""
+		        echoinfo "You can plug the SD card or quit the script with CTRL + C"
+		        
+		        read -p "Press [Enter] key to restart..."
+
+		    done
+		fi
+
+
+	}
 	
 
 	export -f print_ssh_info
@@ -159,9 +251,10 @@ if [ -z ${setup_env+x} ]; then
 	export -f pushd_silent
 	export -f popd_silent
 	export -f indent_c_code
+	export -f check_sd_card_plug
 
 fi
 
 
 trap : 0
-echo -e "\e[92m *** DONE `basename "$0"` *** \n\e[39m"
+echo -e "\e[92m *** DONE set_env.sh *** \n\e[39m"
