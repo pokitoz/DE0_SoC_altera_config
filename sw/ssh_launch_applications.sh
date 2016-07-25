@@ -20,8 +20,8 @@ abort()
 {
 
 	print_ssh_info
-    echo "An error occurred. Exiting..." >&2
-    echo "Are you using the Embedded System Shell ?..." >&2
+    echoerr "An error occurred. Exiting..."
+    echoerr "Are you using the Embedded System Shell ?..."
     exit 1
 }
 

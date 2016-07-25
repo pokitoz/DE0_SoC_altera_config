@@ -16,11 +16,8 @@ pushd "${current_script_dir}"
 
 abort()
 {
-    echo >&2 '
-*** ABORTED ***
-'
-    echo "An error in `basename "$0"` " >&2
-    exit 1
+	echoerr "An error occurred in `basename "$0"`. Exiting..."
+	exit 1
 }
 
 trap 'abort' 0
