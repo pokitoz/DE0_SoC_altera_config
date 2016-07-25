@@ -1,0 +1,15 @@
+# Ignore everything in this directory
+/*
+/*/
+
+# Except these files
+!.gitignore
+!cmos_sensor_input/
+!cmos_sensor_output_generator/
+!hps_0.h
+!Makefile
+!msgdma/
+!quark_interface.c
+!quark_interface.h
+!quark_load.sh
+!quark_unload.sh
