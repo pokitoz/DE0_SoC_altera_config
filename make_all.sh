@@ -19,10 +19,6 @@ source ./setup_env.sh
 ################################################################################
 
 
-# Trap all the errors and stop the script execution if any #####################
-set -e
-
-
 # Functions definitions ########################################################
 
 
@@ -105,12 +101,12 @@ abort() {
 	
     #Reset color to default 
     tput sgr0  
-
-	call_menu_make_all
-#	echoerr "An error occurred in `basename "$0"`. Exiting..."
+	echo ""
+#	call_menu_make_all
+	echoerr "An error occurred in `basename "$0"`. Exiting..."
 	
 
-	#exit 1
+	exit 1
 }
 
 trap 'abort' 0
@@ -130,6 +126,13 @@ required files in hierarchy:
     quartus_dir/setup_project.tcl : Script to setup Quartus project
     quartus_dir/pin_assignment_*.tcl : Script to setup device pin assignments
 EOF
+
+echo ""
+
+echowarn "Here are some .qpf that could be valid.. "
+find ./ -name *.qpf
+
+
 }
 
 
@@ -154,41 +157,48 @@ validate_required_files() {
 
     # Check if there is a quartus project file
     if [ ! -f "${qpf_file_abs}" ]; then
-        echoerr "Error: could not find \"${qpf_file_abs}\"\n"
+        echoerr "${FUNCNAME[0]}() Error: could not find \"${qpf_file_abs}\"\n"
+	echoerr "From variable \$qpf_file_abs"
 
         echowarn "Here are some .qpf that could be valid.. "
-		find ./ -name *.qpf
+	find ./ -name *.qpf
         exit 1
     fi
 
     # Check for qsys file
     if [ ! -f "${qsys_file_abs}" ]; then
-        echoerr "Error: no Qsys system found in \"${quartus_project_dir_abs}/\""
+        echoerr "${FUNCNAME[0]}() Error: no Qsys system found in \"${quartus_project_dir_abs}/\""
+	echoerr "From variable \$quartus_project_dir_abs"
+
         exit 1
     fi
 
     if [ -z ${hps_module_name} ]; then
-        echoerr "Error: no HPS module found in \"${qsys_file_abs}\""
+        echoerr "${FUNCNAME[0]}() Error: no HPS module found in \"${qsys_file_abs}\""
+	echoerr "From variable \$qsys_file_abs"
+
         exit 1
     fi
 
     if [ ! -f "${quartus_project_setup_tcl_file_abs}" ]; then
-        echoerr "Error: could not find \"${quartus_project_setup_tcl_file_abs}\""
+        echoerr "${FUNCNAME[0]}() Error: could not find \"${quartus_project_setup_tcl_file_abs}\""
         exit 1
     fi
 
     if [ ! -f "${fpga_device_pin_assignment_tcl_file_abs}" ]; then
-        echoerr "Error: no \"pin_assignment_*.tcl\" file found in \"${quartus_project_dir_abs}/\""
+        echoerr "${FUNCNAME[0]}() Error: no \"pin_assignment_*.tcl\" file found in \"${quartus_project_dir_abs}\""
         exit 1
     fi
 
     if [ -z "${fpga_device_part_number}" ]; then
-        echoerr "Error: no FPGA device part number found in \"${fpga_device_pin_assignment_tcl_file_abs}\""
+        echoerr "${FUNCNAME[0]}() Error: no FPGA device part number found in \"${fpga_device_pin_assignment_tcl_file_abs}\""
+        echoerr "From variable \$fpga_device_pin_assignment_tcl_file_abs"
         exit 1
     fi
 
     if [ ! -f "${sdcard_image_file_abs}" ]; then
-        echoerr "Error: could not find \"${sdcard_image_file_abs}/\""
+        echoerr "${FUNCNAME[0]}() Error: could not find \"${sdcard_image_file_abs}\""
+        echoerr "From variable \$sdcard_image_file_abs"
         exit 1
     fi
 
@@ -202,7 +212,7 @@ validate_required_files() {
 		sdcard_dev_ext3_id="p2"
 		sdcard_preloader_partition_number="p3"
 	else 
-		echoerr "Error: could not find \"${sdcard_image_file_abs}/\" partitions"
+		echoerr "${FUNCNAME[0]}() Error: could not find \"${sdcard_image_file_abs}/\" partitions"
 		exit 1
 	fi
 
@@ -569,7 +579,9 @@ generate_sd_card_partitions(){
 
 
     set +e
+	echowarn "Trying to unmount ${sdcard_ext3_abs} (just to be sure its not already mounted)"
     sudo umount ${sdcard_ext3_abs}
+	echowarn "Trying to unmount ${sdcard_fat32_abs} (just to be sure its not already mounted)"
     sudo umount ${sdcard_fat32_abs}
     set -e
     
@@ -596,7 +608,9 @@ write_config_to_sd() {
 
 
     set +e
+	echowarn "Trying to unmount ${sdcard_ext3_abs} (just to be sure its not already mounted)"
     sudo umount ${sdcard_ext3_abs}
+	echowarn "Trying to unmount ${sdcard_fat32_abs} (just to be sure its not already mounted)"
     sudo umount ${sdcard_fat32_abs}
     set -e
     
@@ -666,8 +680,10 @@ write_config_to_sd() {
 
 
     set +e
-    sudo umount ${sdcard_fat32_abs}
+	echowarn "Trying to unmount ${sdcard_ext3_abs}"
     sudo umount ${sdcard_ext3_abs}
+	echowarn "Trying to unmount ${sdcard_fat32_abs}"
+    sudo umount ${sdcard_fat32_abs}
     set -e
 
 
@@ -897,14 +913,15 @@ generate_presets(){
 
 # main program #################################################################
 # check argument count
-# sdcard is optional -> -ge 1 instead of -eq 2
+# sdcard is optional -> -ge 1 for the number of arguments
+
 if [ "${#}" -lt 1 ]; then
     usage
-    exit 1
+    exit 0
 fi
 
-
-clear
+# Trap all the errors and stop the script execution if any #####################
+set -e
 
 
 validate_required_files
