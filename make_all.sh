@@ -29,15 +29,14 @@ trap ctrl_c INT
 
 # Functions definitions ########################################################
 print_useful_info(){
-
-    echoinfo "\n*** MAKE SURE MSEL IS 00000 *** "
-    echoinfo "*** The zImage is copied *** "
+	echoinfo "\n*** MAKE SURE MSEL IS 00000 *** "
+	echoinfo "*** The zImage is copied *** "
 	echoinfo "*** You can type ssh $sshcommand (password terasic) Check the static ip in etc_network_interface ***"
-    echoinfo "*** The command \`ifup eth0\` will be executed on the FPGA *** "
-    echoinfo "*** If hps_0.h changed  you need to recompile all files using it *** "    
-    echoinfo "*** Open quartus project to see the details of the block size *** "
+	echoinfo "*** The command \`ifup eth0\` will be executed on the FPGA *** "
+	echoinfo "*** If hps_0.h changed  you need to recompile all files using it *** "    
+	echoinfo "*** Open quartus project to see the details of the block size *** "
 	echoinfo "*** Use minicom or miniterm.py to communicate by USB-UART (baud 115200) *** "
-    echoinfo "*** Go to sw/ and launch the script once the board is on or use the menu ***\n"
+	echoinfo "*** Go to sw/ and launch the script once the board is on or use the menu ***\n"
 	echoinfo "*** If you get \"fatload - load binary file from a dos filesystem \"***\n"
 	echoinfo "       Stop the execution of uboot by pressing any key\n"
 	echoinfo "       Execute \"env default -a\"\n"
@@ -46,10 +45,8 @@ print_useful_info(){
 }
 
 ctrl_c() {
-
-
 	print_useful_info
-  	echogood " \nExited by user with CTRL+C "
+	echogood " \nExited by user with CTRL+C "
 	echogood " *** DONE `basename "$0"` *** "
 	trap : 0
 	exit 0
@@ -57,27 +54,19 @@ ctrl_c() {
 
 
 hcenter() {
-
-  text="$1"
-
-  cols=`tput cols`
-
-  IFS=$'\n'$'\r'
-  for line in $(echo -e $text); do
-
-    line_length=`echo $line| wc -c`
-    half_of_line_length=`expr $line_length / 2`
-    center=`expr \( $cols / 2 \) - $half_of_line_length`
-
-    spaces=""
-    for ((i=0; i < $center; i++)) {
-      spaces="$spaces "
-    }
-
-    echowarn "$spaces$line"
-
-  done
-
+	text="$1"
+	cols=`tput cols`
+	IFS=$'\n'$'\r'
+	for line in $(echo -e $text); do
+		line_length=`echo $line| wc -c`
+		half_of_line_length=`expr $line_length / 2`
+		center=`expr \( $cols / 2 \) - $half_of_line_length`
+		spaces=""
+		for ((i=0; i < $center; i++)) {
+			spaces="$spaces "
+		}
+		echowarn "$spaces$line"
+	done
 }
 
 
@@ -85,27 +74,22 @@ asking_to_do() {
 	ACTION=$1
 	COMMAND=$2
 	echodef "\e[0;33m"
-  read -r -s -n 1 -p "Do $ACTION ? [y,n] : " doit
-  case $doit in
-    y|Y) echowarn "doing $ACTION " && $COMMAND;;
-    n|N) echowarn "passing $ACTION " ;;
-    *) echowarn "bad option " && asking_to_do $ACTION $COMMAND ;;
-  esac
+	read -r -s -n 1 -p "Do $ACTION ? [y,n] : " doit
+	case $doit in
+		y|Y) echowarn "doing $ACTION " && $COMMAND;;
+		n|N) echowarn "passing $ACTION " ;;
+		*) echowarn "bad option " && asking_to_do $ACTION $COMMAND ;;
+	esac
 }
 
 
 
 abort() {
-
-
-	
-    #Reset color to default 
-    tput sgr0  
+	#Reset color to default 
+	tput sgr0  
 	echo ""
 #	call_menu_make_all
 	echoerr "An error occurred in `basename "$0"`. Exiting..."
-	
-
 	exit 1
 }
 
@@ -113,18 +97,18 @@ trap 'abort' 0
 
 
 usage() {
-    cat <<EOF
+	cat <<EOF
 usage: compile.sh quartus_qpf_file [sdcard_target_device_file]
 
 positional arguments:
-    quartus_qpf_file             path to quartus qpf file               [ex: "hw/quartus/my_qpf_project.qpf"]
-    sdcard_target_device_file    path to sdcard device file to write    [ex: "/dev/mmcblk0"]
+	quartus_qpf_file             path to quartus qpf file               [ex: "hw/quartus/my_qpf_project.qpf"]
+	sdcard_target_device_file    path to sdcard device file to write    [ex: "/dev/mmcblk0"]
 
 required files in hierarchy:
-    quartus_dir/*.qpf : Quartus project file
-    quartus_dir/${qsys_file_name_no_extension}.qsys : Qsys file containing a HPS component
-    quartus_dir/setup_project.tcl : Script to setup Quartus project
-    quartus_dir/pin_assignment_*.tcl : Script to setup device pin assignments
+	quartus_dir/*.qpf : Quartus project file
+	quartus_dir/${qsys_file_name_no_extension}.qsys : Qsys file containing a HPS component
+	quartus_dir/setup_project.tcl : Script to setup Quartus project
+	quartus_dir/pin_assignment_*.tcl : Script to setup device pin assignments
 EOF
 
 echo ""
@@ -137,8 +121,7 @@ find ./ -name *.qpf
 
 
 copy_hps_to_folders(){
-    echoinfo "\n *** Copy the HPS_0.h file where needed *** "
-
+	echoinfo "\n *** Copy the HPS_0.h file where needed *** "
 	for folders_hps in $folders_hps_lookup; do
 		for i in $( find "./sw/$folders_hps" -name 'hps_0.h' ); do
 			echoinfo "     Copy hps_0.h to $i   "	
@@ -146,7 +129,7 @@ copy_hps_to_folders(){
 		done
 	done
 
-    echowarn "\n *** If one path was ommited, please copy hps0.h to it *** "
+	echowarn "\n *** If one path was ommited, please copy hps0.h to it *** "
 
 }
 
@@ -155,52 +138,52 @@ validate_required_files() {
 
 	echoinfo "Validate required files"
 
-    # Check if there is a quartus project file
-    if [ ! -f "${qpf_file_abs}" ]; then
-        echoerr "${FUNCNAME[0]}() Error: could not find \"${qpf_file_abs}\"\n"
-	echoerr "From variable \$qpf_file_abs"
+	#Check if there is a quartus project file
+	if [ ! -f "${qpf_file_abs}" ]; then
+		echoerr "${FUNCNAME[0]}() Error: could not find \"${qpf_file_abs}\"\n"
+		echoerr "From variable \$qpf_file_abs"
 
-        echowarn "Here are some .qpf that could be valid.. "
-	find ./ -name *.qpf
-        exit 1
-    fi
+		echowarn "Here are some .qpf that could be valid.. "
+		find ./ -name *.qpf
+		exit 1
+	fi
 
-    # Check for qsys file
-    if [ ! -f "${qsys_file_abs}" ]; then
-        echoerr "${FUNCNAME[0]}() Error: no Qsys system found in \"${quartus_project_dir_abs}/\""
-	echoerr "From variable \$quartus_project_dir_abs"
+	# Check for qsys file
+	if [ ! -f "${qsys_file_abs}" ]; then
+		echoerr "${FUNCNAME[0]}() Error: no Qsys system found in \"${quartus_project_dir_abs}/\""
+		echoerr "From variable \$quartus_project_dir_abs"
 
-        exit 1
-    fi
+		exit 1
+	fi
 
-    if [ -z ${hps_module_name} ]; then
-        echoerr "${FUNCNAME[0]}() Error: no HPS module found in \"${qsys_file_abs}\""
-	echoerr "From variable \$qsys_file_abs"
+	if [ -z ${hps_module_name} ]; then
+		echoerr "${FUNCNAME[0]}() Error: no HPS module found in \"${qsys_file_abs}\""
+		echoerr "From variable \$qsys_file_abs"
 
-        exit 1
-    fi
+		exit 1
+	fi
 
-    if [ ! -f "${quartus_project_setup_tcl_file_abs}" ]; then
-        echoerr "${FUNCNAME[0]}() Error: could not find \"${quartus_project_setup_tcl_file_abs}\""
-        exit 1
-    fi
+	if [ ! -f "${quartus_project_setup_tcl_file_abs}" ]; then
+		echoerr "${FUNCNAME[0]}() Error: could not find \"${quartus_project_setup_tcl_file_abs}\""
+		exit 1
+	fi
 
-    if [ ! -f "${fpga_device_pin_assignment_tcl_file_abs}" ]; then
-        echoerr "${FUNCNAME[0]}() Error: no \"pin_assignment_*.tcl\" file found in \"${quartus_project_dir_abs}\""
-        exit 1
-    fi
+	if [ ! -f "${fpga_device_pin_assignment_tcl_file_abs}" ]; then
+		echoerr "${FUNCNAME[0]}() Error: no \"pin_assignment_*.tcl\" file found in \"${quartus_project_dir_abs}\""
+		exit 1
+	fi
 
-    if [ -z "${fpga_device_part_number}" ]; then
-        echoerr "${FUNCNAME[0]}() Error: no FPGA device part number found in \"${fpga_device_pin_assignment_tcl_file_abs}\""
-        echoerr "From variable \$fpga_device_pin_assignment_tcl_file_abs"
-        exit 1
-    fi
+	if [ -z "${fpga_device_part_number}" ]; then
+		echoerr "${FUNCNAME[0]}() Error: no FPGA device part number found in \"${fpga_device_pin_assignment_tcl_file_abs}\""
+		echoerr "From variable \$fpga_device_pin_assignment_tcl_file_abs"
+		exit 1
+	fi
 
-    if [ ! -f "${sdcard_image_file_abs}" ]; then
-        echoerr "${FUNCNAME[0]}() Error: could not find \"${sdcard_image_file_abs}\""
-        echoerr "From variable \$sdcard_image_file_abs"
-        exit 1
-    fi
+	if [ ! -f "${sdcard_image_file_abs}" ]; then
+		echoerr "${FUNCNAME[0]}() Error: could not find \"${sdcard_image_file_abs}\""
+		echoerr "From variable \$sdcard_image_file_abs"
+		exit 1
+	fi
 
 
 	if [ "$(echo "${sdcard_abs}" | grep -P "/dev/sd\w.*$")" ]; then
@@ -229,168 +212,166 @@ validate_required_files() {
 }
 
 generate_qsys_system() {
-    echo "Generating Qsys system [START]"
+	echo "Generating Qsys system [START]"
 
-    shopt -s globstar
-    for i in **/*.qsys; do # Whitespace-safe and recursive
-        local random_qsys_file="$(readlink -e "${i}")"
-        local random_qsys_file_no_extension="${random_qsys_file%.*}"
-        rm -rf "${random_qsys_file_no_extension}"
-    done
+	shopt -s globstar
+	for i in **/*.qsys; do # Whitespace-safe and recursive
+		local random_qsys_file="$(readlink -e "${i}")"
+		local random_qsys_file_no_extension="${random_qsys_file%.*}"
+		rm -rf "${random_qsys_file_no_extension}"
+	done
 
-    rm -rf "${quartus_project_dir_abs}/.qsys_edit"
-    rm -rf "${sopcinfo_file_abs}"
+	rm -rf "${quartus_project_dir_abs}/.qsys_edit"
+	rm -rf "${sopcinfo_file_abs}"
 
-    qsys-generate "${qsys_file_abs}" --synthesis=VHDL --output-directory="${qsys_output_dir_abs}" --part="${fpga_device_part_number}"
-    #pushd "./hw/quartus"
-    #make qsys_compile
-    #popd
-    echodef "Generating Qsys system $done_string"
+	qsys-generate "${qsys_file_abs}" --synthesis=VHDL --output-directory="${qsys_output_dir_abs}" --part="${fpga_device_part_number}"
+	#pushd "./hw/quartus"
+	#make qsys_compile
+	#popd
+	echodef "Generating Qsys system $done_string"
 }
 
 compile_quartus_project() {
-    echodef "Compiling Quartus project [START]"
+	echodef "Compiling Quartus project [START]"
 
 
-    pushd "${quartus_project_dir_abs}"
+	pushd "${quartus_project_dir_abs}"
 
-    rm -rf "c5_pin_model_dump.txt"
-    rm -rf "db"
-    rm -rf "hps_isw_handoff"
-    rm -rf "hps_sdram_p0_all_pins.txt"
-    rm -rf "hps_sdram_p0_summary.csv"
-    rm -rf "incremental_db"
-    rm -rf "output_files"
-    rm -rf "PLLJ_PLLSPE_INFO.txt"
-    rm -rf "${quartus_project_name_no_extension}.qsf"
-    rm -rf "${quartus_project_name_no_extension}.qws"
-
-
-    quartus_sh -t "${quartus_project_setup_tcl_file_abs}" "${quartus_project_name_no_extension}" "${qsys_file_name_no_extension}"
-    quartus_map --read_settings_files=on --write_settings_files=off "${quartus_project_name_no_extension}" -c "${quartus_project_name_no_extension}"
-
-    # it is normal for the following script to report an error, but it was sucessfully executed
+	rm -rf "c5_pin_model_dump.txt"
+	rm -rf "db"
+	rm -rf "hps_isw_handoff"
+	rm -rf "hps_sdram_p0_all_pins.txt"
+	rm -rf "hps_sdram_p0_summary.csv"
+	rm -rf "incremental_db"
+	rm -rf "output_files"
+	rm -rf "PLLJ_PLLSPE_INFO.txt"
+	rm -rf "${quartus_project_name_no_extension}.qsf"
+	rm -rf "${quartus_project_name_no_extension}.qws"
 
 
-    quartus_sh -t "${quartus_project_setup_tcl_file_abs}" "${quartus_project_name_no_extension}" "${qsys_file_name_no_extension}"
+	quartus_sh -t "${quartus_project_setup_tcl_file_abs}" "${quartus_project_name_no_extension}" "${qsys_file_name_no_extension}"
+	quartus_map --read_settings_files=on --write_settings_files=off "${quartus_project_name_no_extension}" -c "${quartus_project_name_no_extension}"
 
-    set +e
-    echogood " \n\n *** It is normal that the script fails. The execution is correct. Don't worry ;) *** 
-             \n   ************************************************************************************\n "
-    
+	# it is normal for the following script to report an error, but it was sucessfully executed
+
+
+	quartus_sh -t "${quartus_project_setup_tcl_file_abs}" "${quartus_project_name_no_extension}" "${qsys_file_name_no_extension}"
+
+	set +e
+	echogood " \n\n *** It is normal that the script fails. The execution is correct. Don't worry ;) *** 
+	\n   ************************************************************************************\n "
+	
 	ddr3_pin_assignment_script="$(find . -name "hps_sdram_p0_pin_assignments.tcl")"
-    quartus_sta -t "${ddr3_pin_assignment_script}" "${quartus_project_name}"
+	quartus_sta -t "${ddr3_pin_assignment_script}" "${quartus_project_name}"
 #    quartus_fit -t "${hps_sdram_pin_assignment_tcl_file_abs}" "${quartus_project_name_no_extension}"
 
 
 	# Fitter
-    quartus_fit "${quartus_project_name}"
+	quartus_fit "${quartus_project_name}"
 
-    # Assembler
-    quartus_asm "${quartus_project_name}"
+	# Assembler
+	quartus_asm "${quartus_project_name}"
 
 	quartus_sh --flow compile "${quartus_project_name_no_extension}"
 
- 	echoinfo "Report summary copied to ./result/"
-    mv ./hw/quartus/output_files/"${quartus_project_name_no_extension}".summary "./results/`date`"
+	echoinfo "Report summary copied to ./result/"
+	mv ./hw/quartus/output_files/"${quartus_project_name_no_extension}".summary "./results/`date`"
 
-    popd
-    set -e
+	popd
+	set -e
 
-    echodef "Compiling Quartus project $done_string"
-   
-
+	echodef "Compiling Quartus project $done_string"
 
 }
 
 convert_sof_to_rbf() {
-    echodef "Converting sof to rbf [START]"
-    quartus_cpf -c "${sof_file_abs}" "${rbf_file_abs}"
-    echodef "Converting sof to rbf $done_string"
+	echodef "Converting sof to rbf [START]"
+	quartus_cpf -c "${sof_file_abs}" "${rbf_file_abs}"
+	echodef "Converting sof to rbf $done_string"
 }
 
 generate_hps_qsys_header() {
-    echodef "Generating HPS header file [START]"
+	echodef "Generating HPS header file [START]"
 
-    sopc-create-header-files \
-    "${sopcinfo_file_abs}" \
-    --single "${hps_header_file_abs}" \
-    --module "${hps_module_name}"
+	sopc-create-header-files \
+	"${sopcinfo_file_abs}" \
+	--single "${hps_header_file_abs}" \
+	--module "${hps_module_name}"
 
-    echodef "Generating HPS header file $done_string"
+	echodef "Generating HPS header file $done_string"
 }
 
 generate_preloader() {
-    echodef "Generating preloader [START]"
+	echodef "Generating preloader [START]"
 
-    rm -rf "${preloader_target_dir_abs}"
-    mkdir -p "${preloader_target_dir_abs}"
+	rm -rf "${preloader_target_dir_abs}"
+	mkdir -p "${preloader_target_dir_abs}"
 
-    bsp-create-settings \
-    --bsp-dir "${preloader_target_dir_abs}" \
-    --preloader-settings-dir "${preloader_settings_dir_abs}" \
-    --settings "${preloader_settings_file_abs}" \
-    --type spl \
-    --set spl.CROSS_COMPILE "${cross_compile_preloader}" \
-    --set spl.PRELOADER_TGZ "${preloader_source}" \
-    --set spl.boot.BOOTROM_HANDSHAKE_CFGIO "1" \
-    --set spl.boot.BOOT_FROM_NAND "0" \
-    --set spl.boot.BOOT_FROM_QSPI "0" \
-    --set spl.boot.BOOT_FROM_RAM "0" \
-    --set spl.boot.BOOT_FROM_SDMMC "1" \
-    --set spl.boot.CHECKSUM_NEXT_IMAGE "1" \
-    --set spl.boot.EXE_ON_FPGA "0" \
-    --set spl.boot.FAT_BOOT_PARTITION "1" \
-    --set spl.boot.FAT_LOAD_PAYLOAD_NAME "$(basename ${uboot_img_file_abs})" \
-    --set spl.boot.FAT_SUPPORT "1" \
-    --set spl.boot.FPGA_DATA_BASE "0xffff0000" \
-    --set spl.boot.FPGA_DATA_MAX_SIZE "0x10000" \
-    --set spl.boot.FPGA_MAX_SIZE "0x10000" \
-    --set spl.boot.NAND_NEXT_BOOT_IMAGE "0xc0000" \
-    --set spl.boot.QSPI_NEXT_BOOT_IMAGE "0x60000" \
-    --set spl.boot.RAMBOOT_PLLRESET "1" \
-    --set spl.boot.SDMMC_NEXT_BOOT_IMAGE "0x40000" \
-    --set spl.boot.SDRAM_SCRUBBING "0" \
-    --set spl.boot.SDRAM_SCRUB_BOOT_REGION_END "0x2000000" \
-    --set spl.boot.SDRAM_SCRUB_BOOT_REGION_START "0x1000000" \
-    --set spl.boot.SDRAM_SCRUB_REMAIN_REGION "1" \
-    --set spl.boot.STATE_REG_ENABLE "1" \
-    --set spl.boot.WARMRST_SKIP_CFGIO "1" \
-    --set spl.boot.WATCHDOG_ENABLE "1" \
-    --set spl.debug.DEBUG_MEMORY_ADDR "0xfffffd00" \
-    --set spl.debug.DEBUG_MEMORY_SIZE "0x200" \
-    --set spl.debug.DEBUG_MEMORY_WRITE "0" \
-    --set spl.debug.HARDWARE_DIAGNOSTIC "0" \
-    --set spl.debug.SEMIHOSTING "0" \
-    --set spl.debug.SKIP_SDRAM "0" \
-    --set spl.performance.SERIAL_SUPPORT "1" \
-    --set spl.reset_assert.DMA "0" \
-    --set spl.reset_assert.GPIO0 "0" \
-    --set spl.reset_assert.GPIO1 "0" \
-    --set spl.reset_assert.GPIO2 "0" \
-    --set spl.reset_assert.L4WD1 "0" \
-    --set spl.reset_assert.OSC1TIMER1 "0" \
-    --set spl.reset_assert.SDR "0" \
-    --set spl.reset_assert.SPTIMER0 "0" \
-    --set spl.reset_assert.SPTIMER1 "0" \
-    --set spl.warm_reset_handshake.ETR "1" \
-    --set spl.warm_reset_handshake.FPGA "1" \
-    --set spl.warm_reset_handshake.SDRAM "0"
+	bsp-create-settings \
+	--bsp-dir "${preloader_target_dir_abs}" \
+	--preloader-settings-dir "${preloader_settings_dir_abs}" \
+	--settings "${preloader_settings_file_abs}" \
+	--type spl \
+	--set spl.CROSS_COMPILE "${cross_compile_preloader}" \
+	--set spl.PRELOADER_TGZ "${preloader_source}" \
+	--set spl.boot.BOOTROM_HANDSHAKE_CFGIO "1" \
+	--set spl.boot.BOOT_FROM_NAND "0" \
+	--set spl.boot.BOOT_FROM_QSPI "0" \
+	--set spl.boot.BOOT_FROM_RAM "0" \
+	--set spl.boot.BOOT_FROM_SDMMC "1" \
+	--set spl.boot.CHECKSUM_NEXT_IMAGE "1" \
+	--set spl.boot.EXE_ON_FPGA "0" \
+	--set spl.boot.FAT_BOOT_PARTITION "1" \
+	--set spl.boot.FAT_LOAD_PAYLOAD_NAME "$(basename ${uboot_img_file_abs})" \
+	--set spl.boot.FAT_SUPPORT "1" \
+	--set spl.boot.FPGA_DATA_BASE "0xffff0000" \
+	--set spl.boot.FPGA_DATA_MAX_SIZE "0x10000" \
+	--set spl.boot.FPGA_MAX_SIZE "0x10000" \
+	--set spl.boot.NAND_NEXT_BOOT_IMAGE "0xc0000" \
+	--set spl.boot.QSPI_NEXT_BOOT_IMAGE "0x60000" \
+	--set spl.boot.RAMBOOT_PLLRESET "1" \
+	--set spl.boot.SDMMC_NEXT_BOOT_IMAGE "0x40000" \
+	--set spl.boot.SDRAM_SCRUBBING "0" \
+	--set spl.boot.SDRAM_SCRUB_BOOT_REGION_END "0x2000000" \
+	--set spl.boot.SDRAM_SCRUB_BOOT_REGION_START "0x1000000" \
+	--set spl.boot.SDRAM_SCRUB_REMAIN_REGION "1" \
+	--set spl.boot.STATE_REG_ENABLE "1" \
+	--set spl.boot.WARMRST_SKIP_CFGIO "1" \
+	--set spl.boot.WATCHDOG_ENABLE "1" \
+	--set spl.debug.DEBUG_MEMORY_ADDR "0xfffffd00" \
+	--set spl.debug.DEBUG_MEMORY_SIZE "0x200" \
+	--set spl.debug.DEBUG_MEMORY_WRITE "0" \
+	--set spl.debug.HARDWARE_DIAGNOSTIC "0" \
+	--set spl.debug.SEMIHOSTING "0" \
+	--set spl.debug.SKIP_SDRAM "0" \
+	--set spl.performance.SERIAL_SUPPORT "1" \
+	--set spl.reset_assert.DMA "0" \
+	--set spl.reset_assert.GPIO0 "0" \
+	--set spl.reset_assert.GPIO1 "0" \
+	--set spl.reset_assert.GPIO2 "0" \
+	--set spl.reset_assert.L4WD1 "0" \
+	--set spl.reset_assert.OSC1TIMER1 "0" \
+	--set spl.reset_assert.SDR "0" \
+	--set spl.reset_assert.SPTIMER0 "0" \
+	--set spl.reset_assert.SPTIMER1 "0" \
+	--set spl.warm_reset_handshake.ETR "1" \
+	--set spl.warm_reset_handshake.FPGA "1" \
+	--set spl.warm_reset_handshake.SDRAM "0"
 
-    bsp-generate-files \
-    --bsp-dir "${preloader_target_dir_abs}" \
-    --settings "${preloader_settings_file_abs}"
+	bsp-generate-files \
+	--bsp-dir "${preloader_target_dir_abs}" \
+	--settings "${preloader_settings_file_abs}"
 
-    pushd "${preloader_target_dir_abs}"
-    make -j4
-	echoinfo "Removing the created uBoot directory from preloader."
-	echoinfo "The uboot version generated by the preloader is too old."
-	rm -rf ./uboot-socfpga
-    popd
+	pushd "${preloader_target_dir_abs}"
+		make -j4
+		echoinfo "Removing the created uBoot directory from preloader."
+		echoinfo "The uboot version generated by the preloader is too old."
+		rm -rf ./uboot-socfpga
+	popd
 
 
 
-    echodef "Generating preloader $done_string"
+	echodef "Generating preloader $done_string"
 }
 
 
@@ -456,13 +437,11 @@ set -e
 
 generate_uboot_script() {
 
-
 	clone_repo_uboot
-    
 	echodef "Generating uboot script [START]"
 
 
-    cat <<EOF > "${uboot_script_file_src_abs}"
+	cat <<EOF > "${uboot_script_file_src_abs}"
 
 # When booting a Linux kernel, U-Boot passes a string command line as kernel parameter
 # U-Boot uses its bootargs environment variable as parameter.
@@ -521,9 +500,9 @@ run mmcboot;
 EOF
 	
 	echodef "Make script image [START]"
-    mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "${quartus_project_name_no_extension}" -d "${uboot_script_file_src_abs}" "${uboot_script_file_bin_abs}"
+	mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "${quartus_project_name_no_extension}" -d "${uboot_script_file_src_abs}" "${uboot_script_file_bin_abs}"
 	ls -l ${uboot_script_file_bin_abs}
-    echodef "Generating uboot script $done_string"
+	echodef "Generating uboot script $done_string"
 }
 
 generate_sd_card_partitions_dd(){
@@ -533,37 +512,37 @@ generate_sd_card_partitions_dd(){
 	sdcard_partition_size_linux="512M"
 
 
- 	# manually partitioning the sdcard
-        # sudo fdisk /dev/sdx
-            # use the following commands
-            # n p 3 <default> 4095  t   a2 (2048 is default first sector)
-            # n p 1 <default> +32M  t 1  b (4096 is default first sector)
-            # n p 2 <default> +512M t 2 83 (69632 is default first sector)
-            # w
-        # result
-            # Device     Boot Start     End Sectors  Size Id Type
-            # /dev/sdb1        4096   69631   65536   32M  b W95 FAT32
-            # /dev/sdb2       69632 1118207 1048576  512M 83 Linux
-            # /dev/sdb3        2048    4095    2048    1M a2 unknown
-        # note that you can choose any size for the FAT32 and Linux partitions,
-        # but the a2 partition must be 1M.
+		# manually partitioning the sdcard
+	# sudo fdisk /dev/sdx
+	# use the following commands
+	# n p 3 <default> 4095  t   a2 (2048 is default first sector)
+	# n p 1 <default> +32M  t 1  b (4096 is default first sector)
+	# n p 2 <default> +512M t 2 83 (69632 is default first sector)
+	# w
+	# result
+	# Device     Boot Start     End Sectors  Size Id Type
+	# /dev/sdb1        4096   69631   65536   32M  b W95 FAT32
+	# /dev/sdb2       69632 1118207 1048576  512M 83 Linux
+	# /dev/sdb3        2048    4095    2048    1M a2 unknown
+	# note that you can choose any size for the FAT32 and Linux partitions,
+	# but the a2 partition must be 1M.
 
-    # automatically partitioning the sdcard
-    # wipe partition table
-    sudo dd if="/dev/zero" of="${sdcard_abs}" bs=512 count=1
+	# automatically partitioning the sdcard
+	# wipe partition table
+	sudo dd if="/dev/zero" of="${sdcard_abs}" bs=512 count=1
 
-    # create partitions
-    # no need to specify the partition number for the first invocation of
-    # the "t" command in fdisk, because there is only 1 partition at this
-    # point
-    echo -e "n\np\n3\n\n4095\nt\na2\nn\np\n1\n\n+${sdcard_partition_size_fat32}\nt\n1\nb\nn\np\n2\n\n+${sdcard_partition_size_linux}\nt\n2\n83\nw\nq\n" | sudo fdisk "${sdcard_abs}"
+	# create partitions
+	# no need to specify the partition number for the first invocation of
+	# the "t" command in fdisk, because there is only 1 partition at this
+	# point
+	echo -e "n\np\n3\n\n4095\nt\na2\nn\np\n1\n\n+${sdcard_partition_size_fat32}\nt\n1\nb\nn\np\n2\n\n+${sdcard_partition_size_linux}\nt\n2\n83\nw\nq\n" | sudo fdisk "${sdcard_abs}"
 
-    # create filesystems
-    sudo mkfs.vfat "${sdcard_fat32_abs}"
-    sudo mkfs.ext3 -F "${sdcard_ext3_abs}"
+	# create filesystems
+	sudo mkfs.vfat "${sdcard_fat32_abs}"
+	sudo mkfs.ext3 -F "${sdcard_ext3_abs}"
 
 
-    echoinfo "Generating paritions $done_string"
+	echoinfo "Generating paritions $done_string"
 
 }
 
@@ -578,23 +557,23 @@ generate_sd_card_partitions(){
 	check_sd_card_plug "${sdcard_abs}"
 
 
-    set +e
+	set +e
 	echowarn "Trying to unmount ${sdcard_ext3_abs} (just to be sure its not already mounted)"
-    sudo umount ${sdcard_ext3_abs}
+	sudo umount ${sdcard_ext3_abs}
 	echowarn "Trying to unmount ${sdcard_fat32_abs} (just to be sure its not already mounted)"
-    sudo umount ${sdcard_fat32_abs}
-    set -e
-    
-    echoinfo "Writing sdcard image [START]"
+	sudo umount ${sdcard_fat32_abs}
+	set -e
+	
+	echoinfo "Writing sdcard image [START]"
 	number_of_byte=`du -k "${sdcard_image_file_abs}" | cut -f1`
 	echoinfo "Trying to transfer $number_of_byte bytes"	
 	sudo dd if="${sdcard_image_file_abs}" of="${sdcard_abs}" bs="1M"&
-    sudo sh -c "while pkill -10 ^dd$; do sleep 10; done"
+	sudo sh -c "while pkill -10 ^dd$; do sleep 10; done"
 	
 	sudo sync
 
-    echoinfo "You need to unplug/plug the sdcard"
-    echoinfo "Writing sdcard image $done_string"
+	echoinfo "You need to unplug/plug the sdcard"
+	echoinfo "Writing sdcard image $done_string"
 
 
 }
@@ -603,88 +582,88 @@ write_config_to_sd() {
 
 	echoinfo "Write configurations files to SD card"
 
-    check_sd_card_plug "${sdcard_abs}"
+	check_sd_card_plug "${sdcard_abs}"
 
 
 
-    set +e
+	set +e
 	echowarn "Trying to unmount ${sdcard_ext3_abs} (just to be sure its not already mounted)"
-    sudo umount ${sdcard_ext3_abs}
+	sudo umount ${sdcard_ext3_abs}
 	echowarn "Trying to unmount ${sdcard_fat32_abs} (just to be sure its not already mounted)"
-    sudo umount ${sdcard_fat32_abs}
-    set -e
-    
-    sudo mkdir -p "$sdcard_ext3_mount_point_abs"
-    sudo mount -t ext3 "${sdcard_ext3_abs}" "$sdcard_ext3_mount_point_abs"
+	sudo umount ${sdcard_fat32_abs}
+	set -e
+	
+	sudo mkdir -p "$sdcard_ext3_mount_point_abs"
+	sudo mount -t ext3 "${sdcard_ext3_abs}" "$sdcard_ext3_mount_point_abs"
 
-    #Copy interfaces configurations
-    echowarn "Set the ip to static : /etc/network/interfaces"    
+	#Copy interfaces configurations
+	echowarn "Set the ip to static : /etc/network/interfaces"    
 	sudo cp "$configs_folder_a/etc_network_interfaces" "$sdcard_ext3_mount_point_abs/etc/network/interfaces"
 
-   #Add command ifup eth0 to /etc/profile    
-    echowarn "Add command ifup eth0 to /etc/profile"
-    sudo cp "$configs_folder_a/etc_profile" "$sdcard_ext3_mount_point_abs/etc/profile"
+	#Add command ifup eth0 to /etc/profile    
+	echowarn "Add command ifup eth0 to /etc/profile"
+	sudo cp "$configs_folder_a/etc_profile" "$sdcard_ext3_mount_point_abs/etc/profile"
 
 	if [ -f "rc.local" ]; then
 		sudo cp "$configs_folder_a/rc.local" "$sdcard_ext3_mount_point_abs/etc/rc.local"
 	fi
 
-    #Change the date
-    echowarn "Changing the date"
-    sudo cp "$configs_folder_a/timestamp" "$sdcard_ext3_mount_point_abs/etc/timestamp"
+	#Change the date
+	echowarn "Changing the date"
+	sudo cp "$configs_folder_a/timestamp" "$sdcard_ext3_mount_point_abs/etc/timestamp"
 
-    echowarn "Changing messages"
-    sudo cp "$configs_folder_a/issue.net" "$sdcard_ext3_mount_point_abs/etc/issue.net"
-    sudo cp "$configs_folder_a/issue" "$sdcard_ext3_mount_point_abs/etc/issue"
+	echowarn "Changing messages"
+	sudo cp "$configs_folder_a/issue.net" "$sdcard_ext3_mount_point_abs/etc/issue.net"
+	sudo cp "$configs_folder_a/issue" "$sdcard_ext3_mount_point_abs/etc/issue"
 
 	sudo sync
-    sudo umount "${sdcard_ext3_mount_point_abs}"
-    sudo rm -rf "$sdcard_ext3_mount_point_abs"
+	sudo umount "${sdcard_ext3_mount_point_abs}"
+	sudo rm -rf "$sdcard_ext3_mount_point_abs"
 
-    sudo mkdir -p "${sdcard_fat32_mount_point_abs}"
-    sudo mount -t vfat "${sdcard_fat32_abs}" "${sdcard_fat32_mount_point_abs}"
+	sudo mkdir -p "${sdcard_fat32_mount_point_abs}"
+	sudo mount -t vfat "${sdcard_fat32_abs}" "${sdcard_fat32_mount_point_abs}"
 
 
-    sudo dd if="${preloader_mkimage_bin_file_abs}" of="${sdcard_preloader_abs}"
+	sudo dd if="${preloader_mkimage_bin_file_abs}" of="${sdcard_preloader_abs}"
 # bs="64k" seek=0
-    sudo sync
-    echodef "Copy preloader $done_string"
+	sudo sync
+	echodef "Copy preloader $done_string"
 
 	echodef "Remove all file in FAT32 partition"
 	sudo rm -f ${sdcard_fat32_mount_point_abs}/*
 
-    sudo cp "${uboot_img_file_abs}" "${sdcard_fat32_mount_point_abs}"
-    echodef "Copy uboot binary $done_string"
+	sudo cp "${uboot_img_file_abs}" "${sdcard_fat32_mount_point_abs}"
+	echodef "Copy uboot binary $done_string"
 
-    sudo cp "${uboot_script_file_bin_abs}" "${sdcard_fat32_mount_point_abs}"
-    echodef "Copy uboot script $done_string"
+	sudo cp "${uboot_script_file_bin_abs}" "${sdcard_fat32_mount_point_abs}"
+	echodef "Copy uboot script $done_string"
 
-    sudo cp "${rbf_file_abs}" "${sdcard_fat32_mount_point_abs}"
-    echodef "Copy FPGA raw binary file $done_string"
+	sudo cp "${rbf_file_abs}" "${sdcard_fat32_mount_point_abs}"
+	echodef "Copy FPGA raw binary file $done_string"
 
-    sudo cp "$linux_folder_a/zImage" "${sdcard_fat32_mount_point_abs}/zImage"
-    echodef "Copy zImage $done_string"
+	sudo cp "$linux_folder_a/zImage" "${sdcard_fat32_mount_point_abs}/zImage"
+	echodef "Copy zImage $done_string"
 
-    sudo cp "$linux_folder_a/$device_tree_blob_file_name" "${sdcard_fat32_mount_point_abs}/$device_tree_blob_file_name"
-    echodef "Copy Device Tree Binary $done_string"
+	sudo cp "$linux_folder_a/$device_tree_blob_file_name" "${sdcard_fat32_mount_point_abs}/$device_tree_blob_file_name"
+	echodef "Copy Device Tree Binary $done_string"
 
 	dtc -I dtb -O dts -o "$linux_folder_a/$device_tree_output_source_file_name" "$linux_folder_a/$device_tree_blob_file_name"
-    echodef "Copy DTS generated from DTB $done_string"
+	echodef "Copy DTS generated from DTB $done_string"
 
 	ls -l ${sdcard_fat32_mount_point_abs}
 
-    sudo sync
+	sudo sync
 
-    sudo umount "${sdcard_fat32_mount_point_abs}"
-    sudo rm -rf "${sdcard_fat32_mount_point_abs}"
+	sudo umount "${sdcard_fat32_mount_point_abs}"
+	sudo rm -rf "${sdcard_fat32_mount_point_abs}"
 
 
-    set +e
+	set +e
 	echowarn "Trying to unmount ${sdcard_ext3_abs}"
-    sudo umount ${sdcard_ext3_abs}
+	sudo umount ${sdcard_ext3_abs}
 	echowarn "Trying to unmount ${sdcard_fat32_abs}"
-    sudo umount ${sdcard_fat32_abs}
-    set -e
+	sudo umount ${sdcard_fat32_abs}
+	set -e
 
 
 	print_useful_info
@@ -916,8 +895,8 @@ generate_presets(){
 # sdcard is optional -> -ge 1 for the number of arguments
 
 if [ "${#}" -lt 1 ]; then
-    usage
-    exit 0
+	usage
+	exit 0
 fi
 
 # Trap all the errors and stop the script execution if any #####################
