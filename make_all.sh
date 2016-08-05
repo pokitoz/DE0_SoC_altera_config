@@ -186,6 +186,7 @@ validate_required_files() {
 	fi
 
 
+
 	if [ "$(echo "${sdcard_abs}" | grep -P "/dev/sd\w.*$")" ]; then
 		sdcard_fat32_partition_number="1"
 		sdcard_dev_ext3_id="2"
@@ -195,19 +196,19 @@ validate_required_files() {
 		sdcard_dev_ext3_id="p2"
 		sdcard_preloader_partition_number="p3"
 	else 
-		echoerr "${FUNCNAME[0]}() Error: could not find \"${sdcard_image_file_abs}/\" partitions"
-		exit 1
+		echoerr "${FUNCNAME[0]}() Error: could not find \"${sdcard_abs}/\" partitions"
+		echoerr "From variable \${sdcard_abs}"
+		echowarn "\nYou won't be able to write into the SD card.\n"
 	fi
 
 	sdcard_ext3_abs="${sdcard_abs}${sdcard_dev_ext3_id}"
 	sdcard_fat32_abs="${sdcard_abs}${sdcard_fat32_partition_number}"
 	sdcard_preloader_abs="${sdcard_abs}${sdcard_preloader_partition_number}"
 
-
-	echoinfo "Sd card ${sdcard_abs}"
-	echoinfo "  Fat32 ${sdcard_fat32_abs}"
-	echoinfo "  ext3  ${sdcard_ext3_abs}"
-	echoinfo "  Preloader ${sdcard_preloader_abs}"
+	echoinfo "Sd card ${sdcard_abs}:"
+	echoinfo "  Fat32: ${sdcard_fat32_abs}"
+	echoinfo "  ext3 : ${sdcard_ext3_abs}"
+	echoinfo "  Preloader: ${sdcard_preloader_abs}"
 
 }
 
@@ -508,11 +509,28 @@ EOF
 generate_sd_card_partitions_dd(){
 	echoinfo "Partition the SD cards"
 
-	sdcard_partition_size_fat32="32M"
-	sdcard_partition_size_linux="512M"
+	sdcard_partition_size_fat32="32"
+	sdcard_partition_size_linux="512"
 
+	tmp_array_sd_card=`sudo fdisk -l ${sdcard_abs} | grep "Disk ${sdcard_abs}:"`
+	tmp_array_sd_card=($tmp_array_sd_card)
 
-		# manually partitioning the sdcard
+	sdcard_size=${tmp_array_sd_card[2]}
+	if [ "$sdcard_size" -eq "7969" ]; then
+		sdcard_partition_size_linux="7000"
+	fi	
+
+	sdcard_partition_size_fat32=$sdcard_partition_size_fat32"M"
+	sdcard_partition_size_linux=$sdcard_partition_size_linux"M"
+
+	set +e
+	echowarn "Trying to unmount ${sdcard_ext3_abs} (just to be sure its not already mounted)"
+	sudo umount ${sdcard_ext3_abs}
+	echowarn "Trying to unmount ${sdcard_fat32_abs} (just to be sure its not already mounted)"
+	sudo umount ${sdcard_fat32_abs}
+	set -e
+
+	# manually partitioning the sdcard
 	# sudo fdisk /dev/sdx
 	# use the following commands
 	# n p 3 <default> 4095  t   a2 (2048 is default first sector)
@@ -535,14 +553,24 @@ generate_sd_card_partitions_dd(){
 	# no need to specify the partition number for the first invocation of
 	# the "t" command in fdisk, because there is only 1 partition at this
 	# point
-	echo -e "n\np\n3\n\n4095\nt\na2\nn\np\n1\n\n+${sdcard_partition_size_fat32}\nt\n1\nb\nn\np\n2\n\n+${sdcard_partition_size_linux}\nt\n2\n83\nw\nq\n" | sudo fdisk "${sdcard_abs}"
 
+	echoinfo "Running fdisk"
+	echo -e "n\np\n3\n\n4095\nt\na2\nn\np\n1\n\n+${sdcard_partition_size_fat32}\nt\n1\nb\nn\np\n2\n\n+${sdcard_partition_size_linux}\nt\n2\n83\nw\nq\n" | sudo fdisk "${sdcard_abs}"
+	
 	# create filesystems
 	sudo mkfs.vfat "${sdcard_fat32_abs}"
 	sudo mkfs.ext3 -F "${sdcard_ext3_abs}"
 
 
-	echoinfo "Generating paritions $done_string"
+	sudo fdisk -l ${sdcard_abs}
+	echoinfo "SD card size: $sdcard_size MB"
+
+	echoinfo "Partition size:"
+	echoinfo "   FAT32:\t\t $sdcard_partition_size_fat32 "
+	echoinfo "   LINUX(ext4):\t $sdcard_partition_size_linux "
+	echoinfo "   Preloader:\t\t 1M"
+
+	echoinfo "\nGenerating partitions $done_string"
 
 }
 
@@ -873,7 +901,7 @@ call_menu_make_all(){
 
 		elif [ "$opt" = "Generate_sd_partitions" ]; then
 
-			generate_sd_card_partitions
+			generate_sd_card_partitions_dd
 		else
 		 	echowarn "Bad option"
 		fi

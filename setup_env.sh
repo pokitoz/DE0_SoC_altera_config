@@ -4,13 +4,16 @@ set -e
 
 abort()
 {
-	echoerr "An error occurred in `basename "$0"`. Exiting..."
+	echo "An error occurred in `basename "$0"`. Exiting..."
 	exit 1
 }
 
 trap 'abort' 0
 
 if [ -z ${setup_env+x} ]; then
+	
+	clear
+
 	echo -e "$c_info Sourcing setup_env.sh.. $c_default"
 
 	# make sure to be in the same directory as this script #########################
@@ -30,7 +33,29 @@ if [ -z ${setup_env+x} ]; then
 	export c_warning=$c_orange
 	export done_string="$c_default [$c_good DONE$c_default ]"
 
-	export PATH_TO_ALTERA_EMBEDDED="/home/fdepraz/altera/15.1/embedded"
+
+################################################################################
+	###### You need to modify this path to make it work	
+	export PATH_TO_ALTERA="/home/pokitoz/altera/15.1"
+
+	###### This folder should contain the programs to cross compile to an ARM platform
+	# it should have the prefix: arm-linux-gnueabihf-*
+	# DS-5 already provides those programs
+	export PATH_TO_CROSS_COMPILE_SUITE="/usr/local/DS-5_v5.22.0/sw/gcc/bin"
+################################################################################
+
+
+	export PATH_TO_ALTERA_EMBEDDED="$PATH_TO_ALTERA/embedded"
+	export QUARTUS_ROOTDIR="$PATH_TO_ALTERA/quartus"
+	export QSYS_ROOTDIR="$PATH_TO_ALTERA/quartus/sopc_builder/bin"
+	export ALTERAOCLSDKROOT="$PATH_TO_ALTERA/hld"
+	export SOCEDS_DEST_ROOT="$PATH_TO_ALTERA/embedded"
+
+	export PATH="$PATH_TO_ALTERA/modelsim_ase/bin:$PATH"
+	export PATH="$PATH_TO_CROSS_COMPILE_SUITE:$PATH"
+	export PATH="$QUARTUS_ROOTDIR/bin:$PATH"
+
+
 	echo -e "\e[34m Sourcing $PATH_TO_ALTERA_EMBEDDED/env.sh.. \e[39m"
 	source $PATH_TO_ALTERA_EMBEDDED/env.sh
 	export OPTIONS_MENU="Make_all Clean_build Make_Quartus Make_Qsys Make_uboot Make_linux_kernel Generate_dtb Make_applications Send_applications Make_Send_Exec_Get_SSH Push_to_sd_card Exec_applications Get_Results Generate_sd_partitions Quit"
@@ -42,10 +67,6 @@ if [ -z ${setup_env+x} ]; then
 	export preloader_mkimage_bin_file_abs="${preloader_target_dir_abs}/preloader-mkpimage.bin"
 
 	
-
-
-
-
 	hw_folder="hw"
 	sw_folder="sw"
 
@@ -113,7 +134,7 @@ if [ -z ${setup_env+x} ]; then
 	#linux_src_git_repo="https://github.com/altera-opensource/linux-socfpga.git"
 	export linux_menuconfig="0"
 
-	export sdcard_image_file_abs="$linux_folder/DE0-Nano-SoC_Linux_Console.img"
+	export sdcard_image_file_abs="$linux_folder/DE0-Nano-SoC_Linux_Console_2.img"
 
 
 	export setup_env="1"
@@ -156,10 +177,10 @@ if [ -z ${setup_env+x} ]; then
  	#-bbo -hnl -br -brs -c33 -cd33 -ncdb -ce -ci4 -cli0 -d0 -di1 -nfc1 -i8 -ip0 -lp -npcs -nprs -npsl -sai -saf -saw -ncs -nsc -sob -nfca -cp33 -ss -ts8 -il1"
 
 	export folders_hps_lookup="driver application"
-	export folder_drivers="dma_memory_to_memory user_input_driver"
+	export folder_drivers="dma_memory_to_memory user_input_driver dma_fast"
 	#"nav_cam" "quark_interface" "user_input_driver convertor_yuv_rgb dummy_driver"
 
-	export folder_applications="dma_memory_to_memory_app gsensor_hps_app"
+	export folder_applications="dma_memory_to_memory_app gsensor_hps_app dma_fast_app dma_fast_soft_app"
 	#"nav_cam" "nav_cam_static" "quark_interface convertor_yuv_rgb_app " 
 
 
@@ -253,8 +274,9 @@ if [ -z ${setup_env+x} ]; then
 	export -f indent_c_code
 	export -f check_sd_card_plug
 
+	echo -e "\e[92m *** DONE set_env.sh *** \n\e[39m"
 fi
 
 
 trap : 0
-echo -e "\e[92m *** DONE set_env.sh *** \n\e[39m"
+
