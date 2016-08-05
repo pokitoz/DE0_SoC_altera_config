@@ -45,7 +45,4 @@
 *.str
 
 # Dev directory
-sw/*
-!sw/*.sh
-!sw/application
-!sw/driver
+
