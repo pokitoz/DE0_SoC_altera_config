@@ -40,6 +40,7 @@ sdcard_fat32_abs="$3"
 
 #Need to open the sd card
 set +e
+	echowarn "Trying to unmount ${sdcard_ext3_abs} (just to be sure its not already mounted)"
     sudo umount ${sdcard_ext3_abs}
 set -e
 
@@ -51,7 +52,16 @@ sudo mount -t ext3 "${sdcard_ext3_abs}" "$sdcard_ext3_mount_point_abs"
 pushd "${current_script_dir}"
 
 	echowarn "Copy libtiff to $sdcard_ext3_mount_point_abs/home/root/"
-	sudo cp -r ./libtiff "$sdcard_ext3_mount_point_abs/home/root/"
+	sudo cp -r ./api/libtiff "$sdcard_ext3_mount_point_abs/home/root/"
+
+	echowarn "Copy ffmpeg-3.1.1 to $sdcard_ext3_mount_point_abs/home/root/"
+	#sudo cp -r ./api/ffmpeg-3.1.1 "$sdcard_ext3_mount_point_abs/home/root/"
+
+	echowarn "Copy openCV to $sdcard_ext3_mount_point_abs/home/root/"
+	#sudo cp -r ./api/opencv-2.4.13 "$sdcard_ext3_mount_point_abs/home/root/"
+
+	echowarn "Copy slam to $sdcard_ext3_mount_point_abs/home/root/"
+	sudo cp -r ./api/slam "$sdcard_ext3_mount_point_abs/home/root/"
 
 	folder_drivers_array=($folder_drivers)
 	folder_application_array=($folder_applications)
@@ -73,7 +83,12 @@ pushd "${current_script_dir}"
 		sudo mkdir -p "$sdcard_ext3_mount_point_abs/home/root/$application"
 
 		pushd_silent $application_folder_a/$application/
-			sudo cp ./*_app "$sdcard_ext3_mount_point_abs/home/root/$application"
+
+			if [ -f ./*.app ]; then
+				sudo cp ./*_app "$sdcard_ext3_mount_point_abs/home/root/$application"
+			else
+				sudo cp * "$sdcard_ext3_mount_point_abs/home/root/$application"
+			fi
 
 			if [ -f *.y ]; then
 				sudo cp ./*.y "$sdcard_ext3_mount_point_abs/home/root/$application"
