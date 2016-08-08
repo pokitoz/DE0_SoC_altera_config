@@ -114,7 +114,6 @@ if [ -z ${setup_env+x} ]; then
 	export device_tree_source_name="socfpga_project"
 	export device_tree_blob_file_name="$device_tree_source_name.dtb"
 
-
 	export custom_device_tree_source_abs="$presets_folder_a/$device_tree_source_name.dts";
 	
 	export linux_dts_file="${linux_src_dir}/arch/arm/boot/dts/$device_tree_source_name.dts"
@@ -158,10 +157,6 @@ if [ -z ${setup_env+x} ]; then
 	export sshcommand="$sshlogin@$sshaddress"
 
 
-
-
-
-
 	#Force blank lines after declarations.
 	#Forces a blank line after every procedure body.
 	#Do not force newline after the comma separating the arguments of a function declaration
@@ -188,23 +183,23 @@ if [ -z ${setup_env+x} ]; then
 	export sdcard_ext3_mount_point_abs="/media/sdcard_socfpga_ext3"
 
 	echoerr() {
-	    echo -e "$c_error ${@} $c_default"
+	    echo -e "$c_error${@} $c_default"
 	}
 
 	echowarn(){
-	    echo -e "$c_warning ${@} $c_default"
+	    echo -e "$c_warning${@} $c_default"
 	}
 
 	echogood(){
-	    echo -e "$c_good ${@} $c_default"
+	    echo -e "$c_good${@} $c_default"
 	}
 
 	echoinfo(){
-	    echo -e "$c_info ${@} $c_default"
+	    echo -e "$c_info${@} $c_default"
 	}
 
 	echodef(){
-	    echo -e "$c_default ${@} $c_default"
+	    echo -e "$c_default${@} $c_default"
 	}
 
 	print_ssh_info(){
