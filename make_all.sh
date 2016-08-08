@@ -4,7 +4,7 @@
 # inputs #######################################################################
 qpf_file_abs="$(readlink -m "${1}")"
 sdcard_abs="$(readlink -m "${2}")"
-upload_linux_image="$(readlink -m "${3}")"
+generate_partitons="$(readlink -m "${3}")"
 ################################################################################
 
 
@@ -25,6 +25,8 @@ source ./setup_env.sh
 
 # trap ctrl-c and call ctrl_c()
 trap ctrl_c INT
+
+
 
 
 # Functions definitions ########################################################
@@ -83,13 +85,52 @@ asking_to_do() {
 }
 
 
+umount_all(){
+
+	sudo sync
+
+
+	if [ -n "$1" ]; then
+		if mount | grep $1 > /dev/null; then
+			echowarn "unmount $1"
+			sudo umount $1
+		fi
+	fi
+
+	if [ -n "$2" ]; then
+		if mount | grep $2 > /dev/null; then
+			echowarn "unmount $2"
+			sudo umount $2
+		fi
+	fi
+
+	if [ -n "${sdcard_fat32_mount_point_abs}" ]; then
+		if mount | grep ${sdcard_fat32_mount_point_abs} > /dev/null; then
+			echowarn "unmount/rm "
+			sudo umount "${sdcard_fat32_mount_point_abs}"
+			sudo rm -rf "${sdcard_fat32_mount_point_abs}"
+		fi	
+	fi
+
+	if [ -n "${sdcard_ext3_mount_point_abs}" ]; then
+		if mount | grep ${sdcard_ext3_mount_point_abs} > /dev/null; then
+			echowarn "unmount/rm ${sdcard_ext3_mount_point_abs}"
+			sudo umount "${sdcard_ext3_mount_point_abs}"
+			sudo rm -rf "$sdcard_ext3_mount_point_abs"
+		fi	
+	fi
+
+}
 
 abort() {
+
+	umount_all ${sdcard_ext3_abs} ${sdcard_fat32_abs}
 	#Reset color to default 
 	tput sgr0  
 	echo ""
 #	call_menu_make_all
 	echoerr "An error occurred in `basename "$0"`. Exiting..."
+	echoinfo ""	
 	exit 1
 }
 
@@ -114,8 +155,7 @@ EOF
 echo ""
 
 echowarn "Here are some .qpf that could be valid.. "
-find ./ -name *.qpf
-
+find ./hw -name *.qpf
 
 }
 
@@ -130,7 +170,7 @@ copy_hps_to_folders(){
 	done
 
 	echowarn "\n *** If one path was ommited, please copy hps0.h to it *** "
-
+	echoinfo ""
 }
 
 
@@ -209,6 +249,7 @@ validate_required_files() {
 	echoinfo "  Fat32: ${sdcard_fat32_abs}"
 	echoinfo "  ext3 : ${sdcard_ext3_abs}"
 	echoinfo "  Preloader: ${sdcard_preloader_abs}"
+	echoinfo ""
 
 }
 
@@ -230,6 +271,7 @@ generate_qsys_system() {
 	#make qsys_compile
 	#popd
 	echodef "Generating Qsys system $done_string"
+	echoinfo ""
 }
 
 compile_quartus_project() {
@@ -282,6 +324,7 @@ compile_quartus_project() {
 	set -e
 
 	echodef "Compiling Quartus project $done_string"
+	echoinfo ""
 
 }
 
@@ -289,6 +332,7 @@ convert_sof_to_rbf() {
 	echodef "Converting sof to rbf [START]"
 	quartus_cpf -c "${sof_file_abs}" "${rbf_file_abs}"
 	echodef "Converting sof to rbf $done_string"
+	echoinfo ""
 }
 
 generate_hps_qsys_header() {
@@ -300,6 +344,7 @@ generate_hps_qsys_header() {
 	--module "${hps_module_name}"
 
 	echodef "Generating HPS header file $done_string"
+	echoinfo ""
 }
 
 generate_preloader() {
@@ -370,9 +415,8 @@ generate_preloader() {
 		rm -rf ./uboot-socfpga
 	popd
 
-
-
 	echodef "Generating preloader $done_string"
+	echoinfo ""
 }
 
 
@@ -432,7 +476,7 @@ set -e
 	make -j4
 
 	popd
-
+	echoinfo ""
 }
 
 
@@ -504,6 +548,7 @@ EOF
 	mkimage -A arm -O linux -T script -C none -a 0 -e 0 -n "${quartus_project_name_no_extension}" -d "${uboot_script_file_src_abs}" "${uboot_script_file_bin_abs}"
 	ls -l ${uboot_script_file_bin_abs}
 	echodef "Generating uboot script $done_string"
+	echoinfo ""
 }
 
 generate_sd_card_partitions_dd(){
@@ -523,12 +568,7 @@ generate_sd_card_partitions_dd(){
 	sdcard_partition_size_fat32=$sdcard_partition_size_fat32"M"
 	sdcard_partition_size_linux=$sdcard_partition_size_linux"M"
 
-	set +e
-	echowarn "Trying to unmount ${sdcard_ext3_abs} (just to be sure its not already mounted)"
-	sudo umount ${sdcard_ext3_abs}
-	echowarn "Trying to unmount ${sdcard_fat32_abs} (just to be sure its not already mounted)"
-	sudo umount ${sdcard_fat32_abs}
-	set -e
+	umount_all ${sdcard_ext3_abs} ${sdcard_fat32_abs}
 
 	# manually partitioning the sdcard
 	# sudo fdisk /dev/sdx
@@ -561,7 +601,6 @@ generate_sd_card_partitions_dd(){
 	sudo mkfs.vfat "${sdcard_fat32_abs}"
 	sudo mkfs.ext3 -F "${sdcard_ext3_abs}"
 
-
 	sudo fdisk -l ${sdcard_abs}
 	echoinfo "SD card size: $sdcard_size MB"
 
@@ -571,7 +610,7 @@ generate_sd_card_partitions_dd(){
 	echoinfo "   Preloader:\t\t 1M"
 
 	echoinfo "\nGenerating partitions $done_string"
-
+	echoinfo ""
 }
 
 
@@ -581,16 +620,9 @@ generate_sd_card_partitions(){
 
 	echoinfo "Partition the SD cards"
 
-
 	check_sd_card_plug "${sdcard_abs}"
 
-
-	set +e
-	echowarn "Trying to unmount ${sdcard_ext3_abs} (just to be sure its not already mounted)"
-	sudo umount ${sdcard_ext3_abs}
-	echowarn "Trying to unmount ${sdcard_fat32_abs} (just to be sure its not already mounted)"
-	sudo umount ${sdcard_fat32_abs}
-	set -e
+	umount_all ${sdcard_ext3_abs} ${sdcard_fat32_abs}
 	
 	echoinfo "Writing sdcard image [START]"
 	number_of_byte=`du -k "${sdcard_image_file_abs}" | cut -f1`
@@ -602,7 +634,8 @@ generate_sd_card_partitions(){
 
 	echoinfo "You need to unplug/plug the sdcard"
 	echoinfo "Writing sdcard image $done_string"
-
+	
+	echoinfo ""
 
 }
 
@@ -612,52 +645,19 @@ write_config_to_sd() {
 
 	check_sd_card_plug "${sdcard_abs}"
 
-
-
-	set +e
-	echowarn "Trying to unmount ${sdcard_ext3_abs} (just to be sure its not already mounted)"
-	sudo umount ${sdcard_ext3_abs}
-	echowarn "Trying to unmount ${sdcard_fat32_abs} (just to be sure its not already mounted)"
-	sudo umount ${sdcard_fat32_abs}
-	set -e
+	umount_all ${sdcard_ext3_abs} ${sdcard_fat32_abs}
 	
-	sudo mkdir -p "$sdcard_ext3_mount_point_abs"
-	sudo mount -t ext3 "${sdcard_ext3_abs}" "$sdcard_ext3_mount_point_abs"
-
-	#Copy interfaces configurations
-	echowarn "Set the ip to static : /etc/network/interfaces"    
-	sudo cp "$configs_folder_a/etc_network_interfaces" "$sdcard_ext3_mount_point_abs/etc/network/interfaces"
-
-	#Add command ifup eth0 to /etc/profile    
-	echowarn "Add command ifup eth0 to /etc/profile"
-	sudo cp "$configs_folder_a/etc_profile" "$sdcard_ext3_mount_point_abs/etc/profile"
-
-	if [ -f "rc.local" ]; then
-		sudo cp "$configs_folder_a/rc.local" "$sdcard_ext3_mount_point_abs/etc/rc.local"
-	fi
-
-	#Change the date
-	echowarn "Changing the date"
-	sudo cp "$configs_folder_a/timestamp" "$sdcard_ext3_mount_point_abs/etc/timestamp"
-
-	echowarn "Changing messages"
-	sudo cp "$configs_folder_a/issue.net" "$sdcard_ext3_mount_point_abs/etc/issue.net"
-	sudo cp "$configs_folder_a/issue" "$sdcard_ext3_mount_point_abs/etc/issue"
-
-	sudo sync
-	sudo umount "${sdcard_ext3_mount_point_abs}"
-	sudo rm -rf "$sdcard_ext3_mount_point_abs"
-
-	sudo mkdir -p "${sdcard_fat32_mount_point_abs}"
-	sudo mount -t vfat "${sdcard_fat32_abs}" "${sdcard_fat32_mount_point_abs}"
-
 
 	sudo dd if="${preloader_mkimage_bin_file_abs}" of="${sdcard_preloader_abs}"
 # bs="64k" seek=0
 	sudo sync
 	echodef "Copy preloader $done_string"
 
-	echodef "Remove all file in FAT32 partition"
+
+	sudo mkdir -p "${sdcard_fat32_mount_point_abs}"
+	sudo mount -t vfat "${sdcard_fat32_abs}" "${sdcard_fat32_mount_point_abs}"
+
+	echodef "Remove all files in FAT32 partition"
 	sudo rm -f ${sdcard_fat32_mount_point_abs}/*
 
 	sudo cp "${uboot_img_file_abs}" "${sdcard_fat32_mount_point_abs}"
@@ -685,16 +685,71 @@ write_config_to_sd() {
 	sudo umount "${sdcard_fat32_mount_point_abs}"
 	sudo rm -rf "${sdcard_fat32_mount_point_abs}"
 
-
-	set +e
-	echowarn "Trying to unmount ${sdcard_ext3_abs}"
-	sudo umount ${sdcard_ext3_abs}
-	echowarn "Trying to unmount ${sdcard_fat32_abs}"
-	sudo umount ${sdcard_fat32_abs}
-	set -e
-
+	umount_all ${sdcard_ext3_abs} ${sdcard_fat32_abs}
 
 	print_useful_info
+	echoinfo ""
+
+}
+
+
+copy_rootfs_to_sd(){
+
+
+	if [ ! -f $rootfs_file ]; then
+		echowarn "${FUNCNAME[0]}() Could not find the rootfs tar folder at"
+		echowarn "$rootfs_file"
+
+		$rootfs_folder_a/make_rootfs.sh
+	fi
+
+
+	echoinfo "Write rootfs files to SD card"
+	check_sd_card_plug "${sdcard_abs}"
+
+	umount_all ${sdcard_ext3_abs} ${sdcard_fat32_abs}
+	
+	sudo mkdir -p "$sdcard_ext3_mount_point_abs"
+	sudo mount -t ext3 "${sdcard_ext3_abs}" "$sdcard_ext3_mount_point_abs"
+
+	echowarn "Remove all files from the rootfs partition"
+	sudo rm -rf $sdcard_ext3_mount_point_abs/*
+
+	echowarn "Extract the rootfs archive to the SD card"
+	sudo cp "$rootfs_file" "$sdcard_ext3_mount_point_abs"
+
+	pushd "${sdcard_dev_ext3_mount_point}"
+	sudo tar -xzf $rootfs_file
+	popd	
+
+	sudo rm $sdcard_ext3_mount_point_abs/$rootfs_file_name
+
+	#Copy interfaces configurations
+	echowarn "Set the ip to static : /etc/network/interfaces"    
+	sudo cp "$configs_folder_a/etc_network_interfaces" "$sdcard_ext3_mount_point_abs/etc/network/interfaces"
+
+	#Add command ifup eth0 to /etc/profile    
+	echowarn "Add command ifup eth0 to /etc/profile"
+	sudo cp "$configs_folder_a/etc_profile" "$sdcard_ext3_mount_point_abs/etc/profile"
+
+	echowarn "Copy rc.local"
+	if [ -f "rc.local" ]; then
+		sudo cp "$configs_folder_a/rc.local" "$sdcard_ext3_mount_point_abs/etc/rc.local"
+	fi
+
+	#Change the date
+	echowarn "Changing the date"
+	sudo cp "$configs_folder_a/timestamp" "$sdcard_ext3_mount_point_abs/etc/timestamp"
+
+	echowarn "Changing messages"
+	sudo cp "$configs_folder_a/issue.net" "$sdcard_ext3_mount_point_abs/etc/issue.net"
+	sudo cp "$configs_folder_a/issue" "$sdcard_ext3_mount_point_abs/etc/issue"
+
+	sudo sync
+	sudo umount "${sdcard_ext3_mount_point_abs}"
+	sudo rm -rf "$sdcard_ext3_mount_point_abs"
+	
+	echoinfo ""
 }
 
 
@@ -742,6 +797,8 @@ clone_repo_linux() {
 
 	popd
 
+	echoinfo ""
+
 }
 
 build_linux_kernel(){
@@ -786,6 +843,8 @@ build_linux_kernel(){
 
 	popd
 
+	echoinfo ""
+
 }
 
 
@@ -815,6 +874,7 @@ generate_dtb(){
 
 	popd
 
+	echoinfo ""
 }
 
 
@@ -861,10 +921,11 @@ call_menu_make_all(){
 			#generate_dtb $device_tree_source_name
 			$sw_folder_a/make_applications.sh
 	
-			if [ -n "$upload_linux_image" ]; then
+			if [ -n "$generate_partitons" ]; then
 				generate_sd_card_partitions
 			fi
 
+			copy_rootfs_to_sd
 			write_config_to_sd
 			$sw_folder_a/copy_to_sd.sh $sdcard_abs $sdcard_ext3_abs $sdcard_fat32_abs
 	
@@ -907,7 +968,8 @@ call_menu_make_all(){
 
 		elif [ "$opt" = "Generate_sd_partitions" ]; then
 
-			generate_sd_card_partitions_dd
+			generate_sd_card_partitions
+#			generate_sd_card_partitions_dd
 		else
 		 	echowarn "Bad option"
 		fi
@@ -922,6 +984,7 @@ generate_presets(){
 	pushd $presets_folder_a
 		./make_preset.sh
 	popd
+	echoinfo ""
 }
 
 # main program #################################################################
@@ -939,6 +1002,7 @@ set -e
 
 validate_required_files
 generate_presets
+umount_all ${sdcard_ext3_abs} ${sdcard_fat32_abs}
 
 
 call_menu_make_all

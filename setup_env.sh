@@ -79,7 +79,7 @@ if [ -z ${setup_env+x} ]; then
 	scripts_folder=$sw_folder/scripts
 	presets_folder=$sw_folder/presets
 	configs_folder=$presets_folder/configs
-
+	rootfs_folder=$linux_folder/
 
 	export sw_folder_a=`readlink -f $sw_folder`
 	export application_folder_a=`readlink -f $application_folder`
@@ -91,11 +91,15 @@ if [ -z ${setup_env+x} ]; then
 	export preloader_folder_a=`readlink -f $preloader_folder`
 	export presets_folder_a=`readlink -f $presets_folder`
 	export configs_folder_a=`readlink -f $configs_folder`
-
+	export rootfs_folder_a=`readlink -f $rootfs_folder`
 
 	# Linux
 	export linux_src_dir="${linux_folder_a}/linux-source"
 	#linux_src_dir="${linux_folder_a}/linux-socfpga"
+
+	#rootfs
+	export rootfs_file_name="rootfs-multistrap.tgz"
+	export rootfs_file="$linux_folder_a/$rootfs_file_name"
 
 
 	# uboot
@@ -256,7 +260,6 @@ if [ -z ${setup_env+x} ]; then
 
 
 	}
-	
 
 	export -f print_ssh_info
 	export -f echoerr
