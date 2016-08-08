@@ -864,11 +864,17 @@ call_menu_make_all(){
 			if [ -n "$upload_linux_image" ]; then
 				generate_sd_card_partitions
 			fi
+
 			write_config_to_sd
 			$sw_folder_a/copy_to_sd.sh $sdcard_abs $sdcard_ext3_abs $sdcard_fat32_abs
 	
 		elif [ "$opt" = "Clean_build" ]; then
 			echo "Clean"
+			set +e
+
+				rm -rf $preloader_target_dir_abs
+			set -e
+
 		elif [ "$opt" = "Make_Quartus" ]; then
 			compile_quartus_project
 		elif [ "$opt" = "Make_Qsys" ]; then
