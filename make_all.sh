@@ -90,20 +90,6 @@ umount_all(){
 	sudo sync
 
 
-	if [ -n "$1" ]; then
-		if mount | grep $1 > /dev/null; then
-			echowarn "unmount $1"
-			sudo umount $1
-		fi
-	fi
-
-	if [ -n "$2" ]; then
-		if mount | grep $2 > /dev/null; then
-			echowarn "unmount $2"
-			sudo umount $2
-		fi
-	fi
-
 	if [ -n "${sdcard_fat32_mount_point_abs}" ]; then
 		if mount | grep ${sdcard_fat32_mount_point_abs} > /dev/null; then
 			echowarn "unmount/rm "
@@ -119,6 +105,21 @@ umount_all(){
 			sudo rm -rf "$sdcard_ext3_mount_point_abs"
 		fi	
 	fi
+
+	if [ -n "$1" ]; then
+		if mount | grep $1 > /dev/null; then
+			echowarn "unmount $1"
+			sudo umount $1
+		fi
+	fi
+
+	if [ -n "$2" ]; then
+		if mount | grep $2 > /dev/null; then
+			echowarn "unmount $2"
+			sudo umount $2
+		fi
+	fi
+
 
 }
 
@@ -685,8 +686,6 @@ write_config_to_sd() {
 	sudo umount "${sdcard_fat32_mount_point_abs}"
 	sudo rm -rf "${sdcard_fat32_mount_point_abs}"
 
-	umount_all ${sdcard_ext3_abs} ${sdcard_fat32_abs}
-
 	print_useful_info
 	echoinfo ""
 
@@ -709,6 +708,7 @@ copy_rootfs_to_sd(){
 
 	umount_all ${sdcard_ext3_abs} ${sdcard_fat32_abs}
 	
+	echoinfo "Copy to $sdcard_ext3_mount_point_abs"
 	sudo mkdir -p "$sdcard_ext3_mount_point_abs"
 	sudo mount -t ext3 "${sdcard_ext3_abs}" "$sdcard_ext3_mount_point_abs"
 
@@ -718,8 +718,8 @@ copy_rootfs_to_sd(){
 	echowarn "Extract the rootfs archive to the SD card"
 	sudo cp "$rootfs_file" "$sdcard_ext3_mount_point_abs"
 
-	pushd "${sdcard_dev_ext3_mount_point}"
-	sudo tar -xzf $rootfs_file
+	pushd "${sdcard_ext3_mount_point_abs}"
+		sudo tar -xzf $rootfs_file
 	popd	
 
 	sudo rm $sdcard_ext3_mount_point_abs/$rootfs_file_name
@@ -745,6 +745,7 @@ copy_rootfs_to_sd(){
 	sudo cp "$configs_folder_a/issue.net" "$sdcard_ext3_mount_point_abs/etc/issue.net"
 	sudo cp "$configs_folder_a/issue" "$sdcard_ext3_mount_point_abs/etc/issue"
 
+	echowarn "Synchronize"
 	sudo sync
 	sudo umount "${sdcard_ext3_mount_point_abs}"
 	sudo rm -rf "$sdcard_ext3_mount_point_abs"
