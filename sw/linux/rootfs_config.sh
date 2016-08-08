@@ -52,8 +52,8 @@ perl -pi -e 's/^#+\s+(deb\s+http)/$1/g' /etc/apt/sources.list
 apt-get update
 apt-get -y install ssh gdbserver
 
-# create user "sahand" with password "1234"
-username="sod-fpga"
+
+username="soc-fpga"
 password="1234"
 # encrypted password (needed for useradd)
 encrypted_password="$(perl -e 'printf("%s\n", crypt($ARGV[0], "password"))' "${password}")"
