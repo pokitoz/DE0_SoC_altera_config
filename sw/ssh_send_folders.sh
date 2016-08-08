@@ -69,6 +69,11 @@ pushd "${current_script_dir}"
 			echowarn "Sending $application"
 			
 			sshpass -p "$env_sshpassword" scp *_app  $sshcommand:"$application"
+		
+			if [ -f *.y ]; then
+				sshpass -p "$env_sshpassword" scp ./*.y $sshcommand:"$application"
+			fi
+
 
 			if [ -f run_*.sh ]; then
 				sshpass -p "$env_sshpassword" scp run_*.sh $sshcommand:"$application"
