@@ -50,8 +50,9 @@ do
 	pushd $application_folder_a/$application/
 
 		indent_c_code
-		./compile.sh run_$application
-
+		if [ -f  ./compile.sh ]; then
+			./compile.sh run_$application
+		fi
 	popd
 
 
