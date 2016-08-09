@@ -855,7 +855,6 @@ call_menu_make_all(){
 	PS3="Menu #?> "
 	IFS=$old_IFS
 
-
 	select opt in $OPTIONS_MENU; do
 
 		echoinfo "\n $opt\n"
@@ -865,7 +864,7 @@ call_menu_make_all(){
 			break
 		elif [ "$opt" = "Make_all" ]; then
 
-
+			generate_presets
 			#generate_qsys_system
 			#compile_quartus_project
 
@@ -895,8 +894,22 @@ call_menu_make_all(){
 		elif [ "$opt" = "Clean_build" ]; then
 			echo "Clean"
 			set +e
-
+				rm -f  $rootfs_file
+				rm -f  $linux_folder_a/$device_tree_output_source_file_name
 				rm -rf $preloader_target_dir_abs
+				rm -rf $configs_folder_a
+				generate_presets
+				
+				rm -f  $linux_folder_a/zImage
+				rm -f  $linux_folder_a/$device_tree_blob_file_name
+
+				pushd $linux_src_dir
+					make clean
+				popd
+				
+				pushd $uboot_source_dir_abs
+					make clean
+				popd
 			set -e
 
 		elif [ "$opt" = "Make_Quartus" ]; then

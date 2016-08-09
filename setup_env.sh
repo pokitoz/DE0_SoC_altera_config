@@ -155,9 +155,9 @@ if [ -z ${setup_env+x} ]; then
 	echo -e "\e[34m Set KDIR=$KDIR\e[39m"
 
 	#SSH
-	export env_sshpassword="terasic"
 	export sshaddress="10.42.0.3"
 	export sshlogin="root"
+	export env_sshpassword="1234"
 	export sshcommand="$sshlogin@$sshaddress"
 
 
