@@ -85,44 +85,6 @@ asking_to_do() {
 }
 
 
-umount_all(){
-
-	sudo sync
-
-
-	if [ -n "${sdcard_fat32_mount_point_abs}" ]; then
-		if mount | grep ${sdcard_fat32_mount_point_abs} > /dev/null; then
-			echowarn "unmount/rm "
-			sudo umount "${sdcard_fat32_mount_point_abs}"
-			sudo rm -rf "${sdcard_fat32_mount_point_abs}"
-		fi	
-	fi
-
-	if [ -n "${sdcard_ext3_mount_point_abs}" ]; then
-		if mount | grep ${sdcard_ext3_mount_point_abs} > /dev/null; then
-			echowarn "unmount/rm ${sdcard_ext3_mount_point_abs}"
-			sudo umount "${sdcard_ext3_mount_point_abs}"
-			sudo rm -rf "$sdcard_ext3_mount_point_abs"
-		fi	
-	fi
-
-	if [ -n "$1" ]; then
-		if mount | grep $1 > /dev/null; then
-			echowarn "unmount $1"
-			sudo umount $1
-		fi
-	fi
-
-	if [ -n "$2" ]; then
-		if mount | grep $2 > /dev/null; then
-			echowarn "unmount $2"
-			sudo umount $2
-		fi
-	fi
-
-
-}
-
 abort() {
 
 	umount_all ${sdcard_ext3_abs} ${sdcard_fat32_abs}

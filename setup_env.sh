@@ -246,6 +246,15 @@ if [ -z ${setup_env+x} ]; then
 
 	check_sd_card_plug(){
 
+
+		if [ "$(echo "$1" | grep -P "/dev/sd\w.*$")" ]; then
+			tmp_sdcard_fat32="1"
+			tmp_sdcard_ext3="2"
+		elif [ "$(echo "$1" | grep -P "/dev/mmcblk\w.*$")" ]; then
+			tmp_sdcard_fat32="p1"
+			tmp_sdcard_ext3="p2"
+		fi
+
 		if [ ! -b "$1" ]; then
 		    
 		    while [ ! -b "$1" ]; do
@@ -254,13 +263,48 @@ if [ -z ${setup_env+x} ]; then
 		        echoinfo "You can plug the SD card or quit the script with CTRL + C"
 		        
 		        read -p "Press [Enter] key to restart..."
-
+			umount_all "$1$tmp_sdcard_ext3" "$1$tmp_sdcard_fat32"
 		    done
+		fi
+	}
+
+
+	umount_all(){
+
+		if [ -n "${sdcard_fat32_mount_point_abs}" ]; then
+			if mount | grep ${sdcard_fat32_mount_point_abs} > /dev/null; then
+				echowarn "unmount/rm ${sdcard_fat32_mount_point_abs} (need sudo) "
+				sudo umount "${sdcard_fat32_mount_point_abs}"
+				sudo rm -rf "${sdcard_fat32_mount_point_abs}"
+			fi	
+		fi
+
+		if [ -n "${sdcard_ext3_mount_point_abs}" ]; then
+			if mount | grep ${sdcard_ext3_mount_point_abs} > /dev/null; then
+				echowarn "unmount/rm ${sdcard_ext3_mount_point_abs} (need sudo) "
+				sudo umount "${sdcard_ext3_mount_point_abs}"
+				sudo rm -rf "$sdcard_ext3_mount_point_abs"
+			fi	
+		fi
+
+		if [ -n "$1" ]; then
+			if mount | grep $1 > /dev/null; then
+				echowarn "unmount $1 (need sudo) "
+				sudo umount $1
+			fi
+		fi
+
+		if [ -n "$2" ]; then
+			if mount | grep $2 > /dev/null; then
+				echowarn "unmount $2 (need sudo) "
+				sudo umount $2
+			fi
 		fi
 
 
 	}
 
+	export -f umount_all
 	export -f print_ssh_info
 	export -f echoerr
 	export -f echowarn
