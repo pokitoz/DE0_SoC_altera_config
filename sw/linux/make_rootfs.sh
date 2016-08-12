@@ -4,12 +4,11 @@ set -e
 
 # make sure to be in the same directory as this script #########################
 current_script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-
+cd "${current_script_dir}"
 
 source ../../setup_env.sh
 
-
-pushd "${current_script_dir}"
+pushd "$linux_folder_a"
 
 abort()
 {
@@ -60,19 +59,29 @@ if [ "$exist_pkg" == "" ]; then
 fi
 
 echoinfo "Create directory ./rootfs-multistrap"
-mkdir -p ./rootfs-multistrap
 
-cd ./rootfs-multistrap
+set +e
+rm -f $linux_folder_a/rootfs-multistrap/target-rootfs/rootfs-multistrap.tgz
+set -e
+
+mkdir -p $linux_folder_a/rootfs-multistrap
+
+
+
+
+cd $linux_folder_a/rootfs-multistrap
 
 echoinfo "Generate config_multistrap"
 cat <<EOF > config_multistrap
 
 [General]
+# Set the rootfs directory
 directory=target-rootfs
-cleanup=true
+# Exclude the downloaded packages
+cleanup=false
 noauth=true
 unpack=true
-debootstrap=Debian Net Utils Python
+debootstrap=Debian Net Utils Python Opencv OpencvMore
 aptsources=Debian 
 
 
@@ -85,18 +94,33 @@ components=main contrib non-free
 
 [Net]
 #Basic packages to enable the networking
-packages=netbase net-tools ethtool udev iproute iputils-ping ifupdown isc-dhcp-client ssh
+packages=ifupdown ssh
 source=http://cdn.debian.net/debian/
+#netbase net-tools ethtool udev iproute iputils-ping ifupdown isc-dhcp-client ssh
 
 [Utils]
 #General purpose utilities
-packages=locales adduser nano less wget dialog git minicom procps evtest dash wireless-tools wpasupplicant usbutils vim-tiny build-essential htop libsdl1.2-dev binutils octave gnuboy-sdl mednafen mplayer lrzsz
-source=http://cdn.debian.net/debian/
+source=http://cdn.debian.net/debian
+packages=htop binutils
+
+#locales adduser nano less wget dialog git procps evtest dash wpasupplicant usbutils htop binutils
 
 #Python language
 [Python]
-packages=python python-serial
+packages=python python-serial python-dev python-numpy
+source=http://cdn.debian.net/debian
+
+#OpenCV
+[Opencv]
+packages=
 source=http://cdn.debian.net/debian/
+#cmake git pkg-config libavcodec-dev libavformat-dev libswscale-dev
+
+#OpenCV2
+[OpencvMore]
+packages=libjpeg-dev libpng-dev libtiff-dev
+source=http://cdn.debian.net/debian/
+#libjpeg-dev libpng-dev libtiff-dev
 
 EOF
 
@@ -116,10 +140,10 @@ echowarn "Global symbol "\$forceyes" requires explicit package name at /usr/sbin
 echoinfo "Please remove \$forceyes of the command into the /usr/sbin/multistrap at the corresponding line:"
 echoinfo "  system (\"\$str $env chroot \$dir apt-get --reinstall -y install \$forceyes \$reinst\");"
 
-sudo rm -rf ./target-rootfs
+#sudo rm -rf ./target-rootfs
 
 echoinfo "Use multistrap on rootfs (with sudo)"
-sudo multistrap -a armhf -d target-rootfs -f config_multistrap
+multistrap -a armhf -d target-rootfs -f config_multistrap
 echoinfo "Done multistrap on rootfs"
 
 
@@ -148,11 +172,16 @@ sudo rm target-rootfs/usr/bin/qemu-arm-static
 set -e
 
 echoinfo "Create tar file"
-sudo chown -R $USER ./rootfs-multistrap
-cd ./rootfs-multistrap/target-rootfs/
 
-tar -czpf "rootfs-multistrap.tgz" .
-mv rootfs-multistrap.tgz ../../
+
+cd $linux_folder_a/rootfs-multistrap/target-rootfs/
+set +e
+rm -f rootfs-multistrap.tgz
+set -e
+
+sudo chown -R $USER ./*
+tar -czpf "rootfs-multistrap.tgz" ./*
+mv rootfs-multistrap.tgz $rootfs_file
 
 
 popd
