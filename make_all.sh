@@ -894,20 +894,30 @@ call_menu_make_all(){
 		elif [ "$opt" = "Clean_build" ]; then
 			echo "Clean"
 			set +e
+				echowarn "Remove rootfs tar archive $rootfs_file"
 				rm -f  $rootfs_file
+				echowarn "Remove dts file $device_tree_output_source_file_name"
 				rm -f  $linux_folder_a/$device_tree_output_source_file_name
+				echowarn "Remove preloader directory"
 				rm -rf $preloader_target_dir_abs
+				echowarn "Remove configs folder"
 				rm -rf $configs_folder_a
+				echoinfo "   Regeration of configs folder"
 				generate_presets
 				
+				echowarn "Remove zImage"				
 				rm -f  $linux_folder_a/zImage
+				echowarn "Remove dtb $device_tree_blob_file_name"
 				rm -f  $linux_folder_a/$device_tree_blob_file_name
 
+				
 				pushd $linux_src_dir
+					echowarn "Clean linux source"
 					make clean
 				popd
 				
 				pushd $uboot_source_dir_abs
+					echowarn "Clean uboot source"
 					make clean
 				popd
 			set -e
